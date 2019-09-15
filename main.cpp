@@ -7,6 +7,7 @@
 #define BUFFER_OFFSET(i) ((char *)NULL + (i))
 
 using namespace std;
+unsigned int VAO;
 
 // Vertex Shader (for convenience, it is defined in the main here, but we will be using text files for shaders in future)
 // Note: Input to this shader is the vertex positions that we specified for the triangle. 
@@ -135,7 +136,7 @@ return VBO;
 #pragma region VAO_FUNCTIONS
 GLuint generateObjectArray(GLfloat vertices[], GLfloat colors[]) {
 
-	unsigned int VAO;
+	//unsigned int VAO;
 	glGenVertexArrays(1, &VAO);
 
 	// 1. bind Vertex Array Object
@@ -193,10 +194,12 @@ void init()
 			0.0f, 0.0f, 1.0f, 1.0f};
 	// Set up the shaders
 	GLuint shaderProgramID = CompileShaders();
+	generateObjectArray(vertices,colors);
 	// Put the vertices and colors into a vertex buffer object
-	generateObjectBuffer(vertices, colors);
+	//generateObjectBuffer(vertices, colors);
 	// Link the current buffer to the shader
-	linkCurrentBuffertoShader(shaderProgramID);	
+	linkCurrentBuffertoShader(shaderProgramID);
+	display();
 }
 
 int main(int argc, char** argv){

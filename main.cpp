@@ -8,13 +8,15 @@
 using namespace std;
 GLuint VAO[2];
 GLuint VBO[2];
+GLuint shaderProgramID2;
+GLuint shaderProgramID1;
 
 // Vertex Shader (for convenience, it is defined in the main here, but we will be using text files for shaders in future)
 // Note: Input to this shader is the vertex positions that we specified for the triangle. 
 // Note: gl_Position is a special built-in variable that is supposed to contain the vertex position (in X, Y, Z, W)
 // Since our triangle vertices were specified as vec3, we just set W to 1.0.
 
-static const char* pVS = "                                                    \n\
+static const char* pVS1 = "                                                    \n\
 #version 330                                                                  \n\
                                                                               \n\
 in vec3 vPosition;															  \n\
@@ -30,7 +32,7 @@ void main()                                                                     
 
 // Fragment Shader
 // Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
-static const char* pFS = "                                              \n\
+static const char* pFS1 = "                                              \n\
 #version 330                                                            \n\
                                                                         \n\
 in vec4 color;                                                      \n\
@@ -41,6 +43,33 @@ void main()                                                               \n\
 FragColor = color;									 \n\
 }";
 
+
+static const char* pVS2 = "                                                    \n\
+#version 330                                                                  \n\
+                                                                              \n\
+in vec3 vPosition;															  \n\
+in vec4 vColor;																  \n\
+out vec4 color;																 \n\
+                                                                              \n\
+                                                                               \n\
+void main()                                                                     \n\
+{                                                                                \n\
+    gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);  \n\
+	color = vColor;							\n\
+}";
+
+// Fragment Shader
+// Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
+static const char* pFS2 = "                                              \n\
+#version 330                                                            \n\
+                                                                        \n\
+in vec4 color;                                                      \n\
+out vec3 FragColor;                                                      \n\
+                                                                          \n\
+void main()                                                               \n\
+{                                                                          \n\
+FragColor = vec3(1.0f,1.0f,0.0f);									 \n\
+}";
 
 // Shader Functions- click on + to expand
 #pragma region SHADER_FUNCTIONS
@@ -70,7 +99,7 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 	glAttachShader(ShaderProgram, ShaderObj);
 }
 
-GLuint CompileShaders()
+GLuint CompileShaders(const char * pVS, const char * pFS)
 {
 	//Start the process of setting up our shaders by creating a program ID
 	//Note: we will link all the shaders together into this ID
@@ -84,6 +113,7 @@ GLuint CompileShaders()
 	AddShader(shaderProgramID, pVS, GL_VERTEX_SHADER);
 	AddShader(shaderProgramID, pFS, GL_FRAGMENT_SHADER);
 
+	
 	GLint Success = 0;
 	GLchar ErrorLog[1024] = { 0 };
 
@@ -109,7 +139,7 @@ GLuint CompileShaders()
 	}
 	// Finally, use the linked shader program
 	// Note: this program will stay in effect for all draw calls until you replace it with another or explicitly disable its use
-	glUseProgram(shaderProgramID);
+	
 	return shaderProgramID;
 }
 #pragma endregion SHADER_FUNCTIONS
@@ -155,9 +185,11 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT);
 	// NB: Make the call to draw the geometry in the currently activated vertex buffer. This is where the GPU starts to work!
 	glBindVertexArray(VAO[0]);
+	glUseProgram(shaderProgramID1);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 
 	glBindVertexArray(VAO[1]);
+	glUseProgram(shaderProgramID2);
 	glDrawArrays(GL_TRIANGLES, 0, 3);
 	glutSwapBuffers();
 	glBindVertexArray(0);
@@ -175,9 +207,13 @@ void init()
 
 	};
 	// Create a color array that identfies the colors of each vertex (format R, G, B, A)
-	GLfloat colors[] = { 1.0f, 0.0f, 0.0f, 1.0f,
+	GLfloat colors1[] = { 1.0f, 0.0f, 0.0f, 1.0f,
 			0.0f, 1.0f, 0.0f, 1.0f,
 			0.0f, 0.0f, 1.0f, 1.0f };
+
+	GLfloat colors2[] = { 1.0f, 0.0f, 0.0f, 1.0f,
+			0.0f, 1.0f, 0.0f, 1.0f,
+			0.0f, 0.0f, 0.0f, 1.0f };
 	// Set up the shaders
 
 	GLfloat vertices2[] = { 0.0f,-0.5f, 0.0f,
@@ -187,7 +223,8 @@ void init()
 	};
 
 
-	GLuint shaderProgramID = CompileShaders();
+	shaderProgramID1 = CompileShaders(pVS1, pFS1);
+	shaderProgramID2 = CompileShaders(pVS2, pFS2);
 	
 	glGenVertexArrays(2, VAO);
 	glBindVertexArray(VAO[0]);
@@ -197,16 +234,16 @@ void init()
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
 	
 	// Put the vertices and colors into a vertex buffer object
-	generateObjectBuffer(vertices1, colors);
+	generateObjectBuffer(vertices1, colors1);
 	// Link the current buffer to the shader
-	linkCurrentBuffertoShader(shaderProgramID);
+	linkCurrentBuffertoShader(shaderProgramID1);
 
 	glBindVertexArray(VAO[1]);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
 	// Put the vertices and colors into a vertex buffer object
-	generateObjectBuffer(vertices2, colors);
+	generateObjectBuffer(vertices2, colors2);
 	// Link the current buffer to the shader
-	linkCurrentBuffertoShader(shaderProgramID);
+	linkCurrentBuffertoShader(shaderProgramID2);
 
 	
 }
@@ -234,4 +271,3 @@ int main(int argc, char** argv) {
 	glutMainLoop();
 	return 0;
 }
-

@@ -265,7 +265,7 @@ int main(int argc, char** argv) {
 	if (res != GLEW_OK) {
 		fprintf(stderr, "Error: '%s'\n", glewGetErrorString(res));
 		return 1;
-	}
+	} 
 	// Set up your objects and shaders
 	init();
 	// Begin infinite event loop

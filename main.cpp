@@ -51,8 +51,9 @@ mat4 model = identity_mat4();
 char input;
 float x, y = 0.0;
 float z = -10.0;
-float c, v= 10.0;
-float b = 0.1;
+float v = 0.0;
+float b = 1.0;
+float c = 1.0f;
 
 
 
@@ -286,50 +287,35 @@ void display() {
 	int view_mat_location = glGetUniformLocation(shaderProgramID, "view");
 	int proj_mat_location = glGetUniformLocation(shaderProgramID, "proj");
 
+	mat4 view = identity_mat4();
+	mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model = identity_mat4();
+
+
 
 	// Root of the Hierarchy
 	if (input == 'x') {
-		mat4 view = identity_mat4();
-		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-		mat4 model = identity_mat4();
 		model = rotate_x_deg(model, rotate_y);
-		view = translate(view, vec3(x, y, z));
-
-		// update uniforms & draw
-		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
-		glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
-		glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
+	
 	}
 	else if (input == 'y') {
-		mat4 view = identity_mat4();
-		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-		mat4 model = identity_mat4();
 		model = rotate_y_deg(model, rotate_y);
-		view = translate(view, vec3(x, y, z));
 
-		// update uniforms & draw
-		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
-		glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
-		glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
 	}
-	else {
-		
-		mat4 view = identity_mat4();
-		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-		mat4 model = identity_mat4();
-		//view = scale(view, vec3(c, v, 10.0));
+	else if (input == 'z') {
 		model = rotate_z_deg(model, rotate_y);
-		view = translate(view, vec3(x, y, z));
-	
-		
-		// update uniforms & draw
-		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
-		glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
-		glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
-		glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
 	}
+	
+	
+	view = translate(view, vec3(x, y, z));
+	model = scale(model, vec3(c, c, c));
+
+	// update uniforms & draw
+	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
+	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
+	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
+
 
 	// Set up the child matrix
 	/*mat4 modelChild = identity_mat4();
@@ -405,7 +391,7 @@ void keypress(unsigned char key, int xx, int yy) {
 		z = -5.0;
 	}
 	else if (key == 'c') {
-		c = 0.5;
+		c += 0.5;
 	}
 	else if (key == 'v') {
 		v = 2.0;

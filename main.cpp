@@ -49,6 +49,11 @@ int width = 800;
 int height = 600;
 mat4 model = identity_mat4();
 char input;
+float x, y = 0.0;
+float z = -10.0;
+float c, v= 10.0;
+float b = 0.1;
+
 
 
 GLuint loc1, loc2, loc3;
@@ -69,9 +74,9 @@ ModelData load_mesh(const char* file_name) {
 	/* are offset from the origin. This is pre-transform them so      */
 	/* they're in the right position.                                 */
 	const aiScene* scene = aiImportFile(
-		file_name, 
+		file_name,
 		aiProcess_Triangulate | aiProcess_PreTransformVertices
-	); 
+	);
 
 	if (!scene) {
 		fprintf(stderr, "ERROR: reading mesh %s\n", file_name);
@@ -288,7 +293,7 @@ void display() {
 		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 		mat4 model = identity_mat4();
 		model = rotate_x_deg(model, rotate_y);
-		view = translate(view, vec3(0.0, 0.0, -1.0f));
+		view = translate(view, vec3(x, y, z));
 
 		// update uniforms & draw
 		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
@@ -301,7 +306,7 @@ void display() {
 		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 		mat4 model = identity_mat4();
 		model = rotate_y_deg(model, rotate_y);
-		view = translate(view, vec3(0.0, 0.0, -10.0f));
+		view = translate(view, vec3(x, y, z));
 
 		// update uniforms & draw
 		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
@@ -310,12 +315,15 @@ void display() {
 		glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
 	}
 	else {
+		
 		mat4 view = identity_mat4();
 		mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 		mat4 model = identity_mat4();
+		//view = scale(view, vec3(c, v, 10.0));
 		model = rotate_z_deg(model, rotate_y);
-		view = translate(view, vec3(0.0, 0.0, -10.0f));
-
+		view = translate(view, vec3(x, y, z));
+	
+		
 		// update uniforms & draw
 		glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
 		glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
@@ -368,7 +376,7 @@ void init()
 }
 
 // Placeholder code for the keypress
-void keypress(unsigned char key, int x, int y) {
+void keypress(unsigned char key, int xx, int yy) {
 	if (key == 'x') {
 		input = 'x';
 	}
@@ -377,6 +385,33 @@ void keypress(unsigned char key, int x, int y) {
 	}
 	else if (key == 'z') {
 		input = 'z';
+	}
+	else if (key == 'e') {
+		x = 5.0;
+	}
+	else if (key == 'n') {
+		y = 5.0;
+	}
+	else if (key == 's') {
+		y = -5.0;
+	}
+	else if (key == 'w') {
+		x = -5.0;
+	}
+	else if (key == 'i') {
+		z = 5.0;
+	}
+	else if (key == 'o') {
+		z = -5.0;
+	}
+	else if (key == 'c') {
+		c = 0.5;
+	}
+	else if (key == 'v') {
+		v = 2.0;
+	}
+	else if (key == 'b') {
+		b = 10.0;
 	}
 }
 

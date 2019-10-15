@@ -29,7 +29,7 @@ MESH TO LOAD
 #define MESH_NAME "ufodae.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
- 
+
 #pragma region SimpleTypes
 typedef struct
 {
@@ -54,6 +54,11 @@ float z = -10.0;
 float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
+vec4 cameraPos = vec4(0.0f, 0.0f, 3.0f, 0.0f);
+vec4 cameraUp = vec4(0.0f, 1.0f, 0.0f, 0.0f);
+vec4 cameraFront = vec4(0.0f, 0.0f, -1.0f, 0.0f);
+float cameraSpeed = 0.05f;
+
 
 
 
@@ -293,6 +298,11 @@ void display() {
 
 
 
+	
+	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
 	// Root of the Hierarchy
 	if (input == 'x') {
 		model = rotate_x_deg(model, rotate_y);
@@ -304,6 +314,12 @@ void display() {
 	}
 	else if (input == 'z') {
 		model = rotate_z_deg(model, rotate_y);
+	}
+	else if (input == 'o') {
+		persp_proj = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	}
 	
 	
@@ -332,6 +348,8 @@ void display() {
 
 	glutSwapBuffers();
 }
+
+
 
 
 void updateScene() {
@@ -373,32 +391,42 @@ void keypress(unsigned char key, int xx, int yy) {
 		input = 'z';
 	}
 	else if (key == 'e') {
-		x = 5.0;
+		x += 5.0;
 	}
 	else if (key == 'n') {
-		y = 5.0;
+		y += 5.0;
 	}
 	else if (key == 's') {
-		y = -5.0;
+		y += -5.0;
 	}
 	else if (key == 'w') {
-		x = -5.0;
-	}
-	else if (key == 'i') {
-		z = 5.0;
-	}
-	else if (key == 'o') {
-		z = -5.0;
+		x += -5.0;
 	}
 	else if (key == 'c') {
 		c += 0.5;
 	}
 	else if (key == 'v') {
-		v = 2.0;
+		c -= 0.5;
 	}
-	else if (key == 'b') {
-		b = 10.0;
+	else if (key == 'o') {
+		input = 'o';
 	}
+	else if (key == 'p') {
+		input = 'p';
+	}
+	else if (key == 't') {
+		cameraPos += cameraSpeed * cameraFront;
+	}
+	else if (key == 'f') {
+		input = 'p';
+	}
+	else if (key == 'g') {
+		input = 'p';
+	}
+	else if (key == 'h') {
+		input = 'p';
+	}
+
 }
 
 int main(int argc, char** argv) {

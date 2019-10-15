@@ -54,11 +54,11 @@ float z = -10.0;
 float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
-vec4 cameraPos = vec4(0.0f, 0.0f, 3.0f, 0.0f);
-vec4 cameraUp = vec4(0.0f, 1.0f, 0.0f, 0.0f);
-vec4 cameraFront = vec4(0.0f, 0.0f, -1.0f, 0.0f);
-float cameraSpeed = 0.05f;
-
+vec3 cameraPos = vec3(0.0f, 0.0f, 3.0f);
+vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
+vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
+//float cameraSpeed = 0.05f;
+vec3 cameraSpeed =vec3(0.05f, 0.05f, 0.05f);
 
 
 
@@ -298,7 +298,7 @@ void display() {
 
 
 
-	
+
 	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
 
@@ -306,7 +306,7 @@ void display() {
 	// Root of the Hierarchy
 	if (input == 'x') {
 		model = rotate_x_deg(model, rotate_y);
-	
+
 	}
 	else if (input == 'y') {
 		model = rotate_y_deg(model, rotate_y);
@@ -321,8 +321,8 @@ void display() {
 	else if (input == 'p') {
 		persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	}
-	
-	
+
+
 	view = translate(view, vec3(x, y, z));
 	model = scale(model, vec3(c, c, c));
 
@@ -415,16 +415,17 @@ void keypress(unsigned char key, int xx, int yy) {
 		input = 'p';
 	}
 	else if (key == 't') {
-		cameraPos += cameraSpeed * cameraFront;
+		
+		cameraPos += cross(cameraFront,(cameraSpeed));
 	}
 	else if (key == 'f') {
-		input = 'p';
+		cameraPos -= cross(normalise(cross(cameraFront, cameraUp)), cameraSpeed);
 	}
 	else if (key == 'g') {
-		input = 'p';
+		cameraPos -= cross(cameraFront, (cameraSpeed)); 
 	}
 	else if (key == 'h') {
-		input = 'p';
+		cameraPos += cross(normalise(cross(cameraFront, cameraUp)),cameraSpeed);
 	}
 
 }

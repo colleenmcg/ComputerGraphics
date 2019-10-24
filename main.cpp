@@ -27,8 +27,8 @@ MESH TO LOAD
 ----------------------------------------------------------------------------*/
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
-#define MESH_NAME_1 "alienFinal.dae"
-#define MESH_NAME_2 "ufoFinal.dae"
+#define MESH_NAME_1 "alienPoss.dae"
+#define MESH_NAME_2 "ufoPoss.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 
@@ -49,60 +49,7 @@ GLuint VBO[2];
 GLuint shaderProgramID2;
 GLuint shaderProgramID1;
 
-static const char* pVS1 = "                                                    \n\
-#version 330                                                                  \n\
-                                                                              \n\
-in vec3 vPosition;															  \n\
-in vec4 vColor;																  \n\
-out vec4 color;																 \n\
-                                                                              \n\
-                                                                               \n\
-void main()                                                                     \n\
-{                                                                                \n\
-    gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);  \n\
-	color = vColor;							\n\
-}";
 
-// Fragment Shader
-// Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
-static const char* pFS1 = "                                              \n\
-#version 330                                                            \n\
-                                                                        \n\
-in vec4 color;                                                      \n\
-out vec4 FragColor;                                                      \n\
-                                                                          \n\
-void main()                                                               \n\
-{                                                                          \n\
-FragColor = color;									 \n\
-}";
-
-
-static const char* pVS2 = "                                                    \n\
-#version 330                                                                  \n\
-                                                                              \n\
-in vec3 vPosition;															  \n\
-in vec4 vColor;																  \n\
-out vec4 color;																 \n\
-                                                                              \n\
-                                                                               \n\
-void main()                                                                     \n\
-{                                                                                \n\
-    gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);  \n\
-	color = vColor;							\n\
-}";
-
-// Fragment Shader
-// Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
-static const char* pFS2 = "                                              \n\
-#version 330                                                            \n\
-                                                                        \n\
-in vec4 color;                                                      \n\
-out vec3 FragColor;                                                      \n\
-                                                                          \n\
-void main()                                                               \n\
-{                                                                          \n\
-FragColor = vec3(1.0f,1.0f,0.0f);									 \n\
-}";
 
 ModelData mesh_data1;
 ModelData mesh_data2;
@@ -116,11 +63,12 @@ float z = -10.0;
 float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
+float ypos =-1;
 vec3 cameraPos = vec3(0.0f, 0.0f, 3.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
 //float cameraSpeed = 0.05f;
-vec3 cameraSpeed =vec3(0.05f, 0.05f, 0.05f);
+vec3 cameraSpeed = vec3(0.05f, 0.05f, 0.05f);
 
 
 
@@ -220,10 +168,10 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 		std::cin.get();
 		exit(1);
 	}
-	//const char* pShaderSource = readShaderSource(pShaderText);
+	const char* pShaderSource = readShaderSource(pShaderText);
 
 	// Bind the source code to the shader, this happens before compilation
-	glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderText, NULL);
+	glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderSource, NULL);
 	// compile the shader and check for errors
 	glCompileShader(ShaderObj);
 	GLint success;
@@ -243,7 +191,7 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 	glAttachShader(ShaderProgram, ShaderObj);
 }
 
-GLuint CompileShaders(const char * pVS, const char * pFS)
+GLuint CompileShaders()
 {
 	//Start the process of setting up our shaders by creating a program ID
 	//Note: we will link all the shaders together into this ID
@@ -256,8 +204,8 @@ GLuint CompileShaders(const char * pVS, const char * pFS)
 	}
 
 	// Create two shader objects, one for the vertex, and one for the fragment shader
-	AddShader(shaderProgramID, pVS, GL_VERTEX_SHADER);
-	AddShader(shaderProgramID, pFS, GL_FRAGMENT_SHADER);
+	AddShader(shaderProgramID, "simpleVertexShader.txt", GL_VERTEX_SHADER);
+	AddShader(shaderProgramID, "simpleFragmentShader.txt", GL_FRAGMENT_SHADER);
 
 	GLint Success = 0;
 	GLchar ErrorLog[1024] = { '\0' };
@@ -302,7 +250,6 @@ void generateObjectBufferMesh() {
 	//Might be an idea to do a check for that before generating and binding the buffer.
 
 
-
 	glGenVertexArrays(2, VAO);
 	glBindVertexArray(VAO[0]);
 
@@ -312,27 +259,34 @@ void generateObjectBufferMesh() {
 
 	mesh_data1 = load_mesh(MESH_NAME_1);
 	mesh_data2 = load_mesh(MESH_NAME_2);
-	unsigned int vp_vbo = 0;
 
 
-	
 	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mVertices[0], GL_STATIC_DRAW);
-	//unsigned int vn_vbo = 0;
-	//glGenBuffers(1, &vn_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mNormals[0], GL_STATIC_DRAW);
-	//linkCurrentBuffertoShader(shaderProgramID1);
 
 	loc1 = glGetAttribLocation(shaderProgramID1, "vertex_position");
 	loc2 = glGetAttribLocation(shaderProgramID1, "vertex_normal");
 	loc3 = glGetAttribLocation(shaderProgramID1, "vertex_texture");
 
 	glEnableVertexAttribArray(loc1);
-	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(loc2);
-	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	glBindVertexArray(VAO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	
+	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
+
+	loc1 = glGetAttribLocation(shaderProgramID1, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID1, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID1, "vertex_texture");
+
+	glEnableVertexAttribArray(loc1);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	unsigned int vt_vbo = 0;
@@ -341,52 +295,11 @@ void generateObjectBufferMesh() {
 	//	glBufferData (GL_ARRAY_BUFFER, monkey_head_data.mTextureCoords * sizeof (vec2), &monkey_head_data.mTextureCoords[0], GL_STATIC_DRAW);
 
 
-	glBindVertexArray(VAO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	// Put the vertices and colors into a vertex buffer object
-
-	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
-	//unsigned int vn_vbo = 0;
-	//glGenBuffers(1, &vn_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mNormals[0], GL_STATIC_DRAW);
-	// Link the current buffer to the shader
-	//linkCurrentBuffertoShader(shaderProgramID2);
-
-	loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
-
-	glEnableVertexAttribArray(loc1);
-	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	glEnableVertexAttribArray(loc2);
-	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-
-	//unsigned int vao = 0;
-	//glBindVertexArray(vao);
-
-	
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	glEnableVertexAttribArray (loc3);
 	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-}
-
-void linkCurrentBuffertoShader(GLuint shaderProgramID) {
-	loc1 = glGetAttribLocation(shaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID, "vertex_texture");
-
-	glEnableVertexAttribArray(loc1);
-	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
-	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	glEnableVertexAttribArray(loc2);
-	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
-	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 #pragma endregion VBO_FUNCTIONS
 
@@ -437,8 +350,8 @@ void display() {
 	else if (input == 'z') {
 		model1 = rotate_z_deg(model1, rotate_y);
 	}
-	
-	view1 = translate(view1, vec3(x, y, z));
+
+	view1 = translate(view1, vec3(x, ypos, z));
 	model1 = scale(model1, vec3(c, c, c));
 
 	// update uniforms & draw
@@ -495,7 +408,13 @@ void display() {
 
 
 void updateScene() {
-
+	
+	if (ypos >= -8) {
+		ypos -= 0.001;
+	}
+	else {
+		ypos = -8;
+	}
 	static DWORD last_time = 0;
 	DWORD curr_time = timeGetTime();
 	if (last_time == 0)
@@ -518,8 +437,8 @@ void init()
 	//GLuint shaderProgramID = CompileShaders();
 	// load mesh into a vertex buffer array
 
-	shaderProgramID1 = CompileShaders(pVS1, pFS1);
-	shaderProgramID2 = CompileShaders(pVS2, pFS2);
+	shaderProgramID1 = CompileShaders();
+	shaderProgramID2 = CompileShaders();
 
 
 	generateObjectBufferMesh();
@@ -562,17 +481,17 @@ void keypress(unsigned char key, int xx, int yy) {
 		input = 'p';
 	}
 	else if (key == 't') {
-		
-		cameraPos += cross(cameraFront,(cameraSpeed));
+
+		cameraPos += cross(cameraFront, (cameraSpeed));
 	}
 	else if (key == 'f') {
 		cameraPos -= cross(normalise(cross(cameraFront, cameraUp)), cameraSpeed);
 	}
 	else if (key == 'g') {
-		cameraPos -= cross(cameraFront, (cameraSpeed)); 
+		cameraPos -= cross(cameraFront, (cameraSpeed));
 	}
 	else if (key == 'h') {
-		cameraPos += cross(normalise(cross(cameraFront, cameraUp)),cameraSpeed);
+		cameraPos += cross(normalise(cross(cameraFront, cameraUp)), cameraSpeed);
 	}
 
 }
@@ -603,3 +522,4 @@ int main(int argc, char** argv) {
 	glutMainLoop();
 	return 0;
 }
+

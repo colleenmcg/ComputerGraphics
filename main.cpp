@@ -10,6 +10,7 @@
 // OpenGL includes
 #include <GL/glew.h>
 #include <GL/freeglut.h>
+#include <C:\Users\Sarah\Documents\Colleen\Lab 04 - Sample Object Hierarchy\glm\glm\glm.hpp>
 
 // Assimp includes
 #include <assimp/cimport.h> // scene importer
@@ -26,7 +27,8 @@ MESH TO LOAD
 ----------------------------------------------------------------------------*/
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
-#define MESH_NAME "grassScene.dae"
+#define MESH_NAME_1 "alienFinal.dae"
+#define MESH_NAME_2 "ufoFinal.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 
@@ -42,8 +44,68 @@ typedef struct
 
 using namespace std;
 GLuint shaderProgramID;
+GLuint VAO[2];
+GLuint VBO[2];
+GLuint shaderProgramID2;
+GLuint shaderProgramID1;
 
-ModelData mesh_data;
+static const char* pVS1 = "                                                    \n\
+#version 330                                                                  \n\
+                                                                              \n\
+in vec3 vPosition;															  \n\
+in vec4 vColor;																  \n\
+out vec4 color;																 \n\
+                                                                              \n\
+                                                                               \n\
+void main()                                                                     \n\
+{                                                                                \n\
+    gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);  \n\
+	color = vColor;							\n\
+}";
+
+// Fragment Shader
+// Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
+static const char* pFS1 = "                                              \n\
+#version 330                                                            \n\
+                                                                        \n\
+in vec4 color;                                                      \n\
+out vec4 FragColor;                                                      \n\
+                                                                          \n\
+void main()                                                               \n\
+{                                                                          \n\
+FragColor = color;									 \n\
+}";
+
+
+static const char* pVS2 = "                                                    \n\
+#version 330                                                                  \n\
+                                                                              \n\
+in vec3 vPosition;															  \n\
+in vec4 vColor;																  \n\
+out vec4 color;																 \n\
+                                                                              \n\
+                                                                               \n\
+void main()                                                                     \n\
+{                                                                                \n\
+    gl_Position = vec4(vPosition.x, vPosition.y, vPosition.z, 1.0);  \n\
+	color = vColor;							\n\
+}";
+
+// Fragment Shader
+// Note: no input in this shader, it just outputs the colour of all fragments, in this case set to red (format: R, G, B, A).
+static const char* pFS2 = "                                              \n\
+#version 330                                                            \n\
+                                                                        \n\
+in vec4 color;                                                      \n\
+out vec3 FragColor;                                                      \n\
+                                                                          \n\
+void main()                                                               \n\
+{                                                                          \n\
+FragColor = vec3(1.0f,1.0f,0.0f);									 \n\
+}";
+
+ModelData mesh_data1;
+ModelData mesh_data2;
 unsigned int mesh_vao = 0;
 int width = 800;
 int height = 600;
@@ -89,9 +151,9 @@ ModelData load_mesh(const char* file_name) {
 		return modelData;
 	}
 
-	printf("  %i materials\n", scene->mNumMaterials);
-	printf("  %i meshes\n", scene->mNumMeshes);
-	printf("  %i textures\n", scene->mNumTextures);
+	printf("  %i materials\n in %s\n", scene->mNumMaterials, file_name);
+	printf("  %i meshes\n in %s\n", scene->mNumMeshes, file_name);
+	printf("  %i textures\n in %s\n", scene->mNumTextures, file_name);
 
 	for (unsigned int m_i = 0; m_i < scene->mNumMeshes; m_i++) {
 		const aiMesh* mesh = scene->mMeshes[m_i];
@@ -158,10 +220,10 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 		std::cin.get();
 		exit(1);
 	}
-	const char* pShaderSource = readShaderSource(pShaderText);
+	//const char* pShaderSource = readShaderSource(pShaderText);
 
 	// Bind the source code to the shader, this happens before compilation
-	glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderSource, NULL);
+	glShaderSource(ShaderObj, 1, (const GLchar**)&pShaderText, NULL);
 	// compile the shader and check for errors
 	glCompileShader(ShaderObj);
 	GLint success;
@@ -181,7 +243,7 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 	glAttachShader(ShaderProgram, ShaderObj);
 }
 
-GLuint CompileShaders()
+GLuint CompileShaders(const char * pVS, const char * pFS)
 {
 	//Start the process of setting up our shaders by creating a program ID
 	//Note: we will link all the shaders together into this ID
@@ -194,8 +256,8 @@ GLuint CompileShaders()
 	}
 
 	// Create two shader objects, one for the vertex, and one for the fragment shader
-	AddShader(shaderProgramID, "simpleVertexShader.txt", GL_VERTEX_SHADER);
-	AddShader(shaderProgramID, "simpleFragmentShader.txt", GL_FRAGMENT_SHADER);
+	AddShader(shaderProgramID, pVS, GL_VERTEX_SHADER);
+	AddShader(shaderProgramID, pFS, GL_FRAGMENT_SHADER);
 
 	GLint Success = 0;
 	GLchar ErrorLog[1024] = { '\0' };
@@ -224,7 +286,7 @@ GLuint CompileShaders()
 	}
 	// Finally, use the linked shader program
 	// Note: this program will stay in effect for all draw calls until you replace it with another or explicitly disable its use
-	glUseProgram(shaderProgramID);
+	//glUseProgram(shaderProgramID);
 	return shaderProgramID;
 }
 #pragma endregion SHADER_FUNCTIONS
@@ -239,19 +301,38 @@ void generateObjectBufferMesh() {
 	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
 	//Might be an idea to do a check for that before generating and binding the buffer.
 
-	mesh_data = load_mesh(MESH_NAME);
-	unsigned int vp_vbo = 0;
-	loc1 = glGetAttribLocation(shaderProgramID, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID, "vertex_texture");
 
-	glGenBuffers(1, &vp_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
-	glBufferData(GL_ARRAY_BUFFER, mesh_data.mPointCount * sizeof(vec3), &mesh_data.mVertices[0], GL_STATIC_DRAW);
-	unsigned int vn_vbo = 0;
-	glGenBuffers(1, &vn_vbo);
-	glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
-	glBufferData(GL_ARRAY_BUFFER, mesh_data.mPointCount * sizeof(vec3), &mesh_data.mNormals[0], GL_STATIC_DRAW);
+
+	glGenVertexArrays(2, VAO);
+	glBindVertexArray(VAO[0]);
+
+	glGenBuffers(2, VBO);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+
+
+	mesh_data1 = load_mesh(MESH_NAME_1);
+	mesh_data2 = load_mesh(MESH_NAME_2);
+	unsigned int vp_vbo = 0;
+
+
+	
+	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mVertices[0], GL_STATIC_DRAW);
+	//unsigned int vn_vbo = 0;
+	//glGenBuffers(1, &vn_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mNormals[0], GL_STATIC_DRAW);
+	//linkCurrentBuffertoShader(shaderProgramID1);
+
+	loc1 = glGetAttribLocation(shaderProgramID1, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID1, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID1, "vertex_texture");
+
+	glEnableVertexAttribArray(loc1);
+	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	unsigned int vt_vbo = 0;
@@ -259,20 +340,53 @@ void generateObjectBufferMesh() {
 	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	//	glBufferData (GL_ARRAY_BUFFER, monkey_head_data.mTextureCoords * sizeof (vec2), &monkey_head_data.mTextureCoords[0], GL_STATIC_DRAW);
 
-	unsigned int vao = 0;
-	glBindVertexArray(vao);
+
+	glBindVertexArray(VAO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	// Put the vertices and colors into a vertex buffer object
+
+	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
+	//unsigned int vn_vbo = 0;
+	//glGenBuffers(1, &vn_vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mNormals[0], GL_STATIC_DRAW);
+	// Link the current buffer to the shader
+	//linkCurrentBuffertoShader(shaderProgramID2);
+
+	loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
 
 	glEnableVertexAttribArray(loc1);
-	glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
+	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(loc2);
-	glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
+	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+
+	//unsigned int vao = 0;
+	//glBindVertexArray(vao);
+
+	
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	glEnableVertexAttribArray (loc3);
 	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
 	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+}
+
+void linkCurrentBuffertoShader(GLuint shaderProgramID) {
+	loc1 = glGetAttribLocation(shaderProgramID, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID, "vertex_texture");
+
+	glEnableVertexAttribArray(loc1);
+	//glBindBuffer(GL_ARRAY_BUFFER, vp_vbo);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	//glBindBuffer(GL_ARRAY_BUFFER, vn_vbo);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 }
 #pragma endregion VBO_FUNCTIONS
 
@@ -284,57 +398,81 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glUseProgram(shaderProgramID);
+	glBindVertexArray(VAO[0]);
+	glUseProgram(shaderProgramID1);
 
 
 
 	//Declare your uniform variables that will be used in your shader
-	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
-	int view_mat_location = glGetUniformLocation(shaderProgramID, "view");
-	int proj_mat_location = glGetUniformLocation(shaderProgramID, "proj");
+	int matrix_location1 = glGetUniformLocation(shaderProgramID1, "model");
+	int view_mat_location1 = glGetUniformLocation(shaderProgramID1, "view");
+	int proj_mat_location1 = glGetUniformLocation(shaderProgramID1, "proj");
 
-	mat4 view = identity_mat4();
-	mat4 persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	mat4 model = identity_mat4();
+	mat4 view1 = identity_mat4();
+	mat4 persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model1 = identity_mat4();
 
 
 	if (input == 'o') {
-		persp_proj = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+		persp_proj1 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
 	}
 	else if (input == 'p') {
-		persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+		persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	}
 
 
-	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+	view1 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
 
 
 	// Root of the Hierarchy
 	if (input == 'x') {
-		model = rotate_x_deg(model, rotate_y);
+		model1 = rotate_x_deg(model1, rotate_y);
 
 	}
 	else if (input == 'y') {
-		model = rotate_y_deg(model, rotate_y);
+		model1 = rotate_y_deg(model1, rotate_y);
 
 	}
 	else if (input == 'z') {
-		model = rotate_z_deg(model, rotate_y);
+		model1 = rotate_z_deg(model1, rotate_y);
 	}
 	
-
-
-
-	view = translate(view, vec3(x, y, z));
-	model = scale(model, vec3(c, c, c));
+	view1 = translate(view1, vec3(x, y, z));
+	model1 = scale(model1, vec3(c, c, c));
 
 	// update uniforms & draw
-	glUniformMatrix4fv(proj_mat_location, 1, GL_FALSE, persp_proj.m);
-	glUniformMatrix4fv(view_mat_location, 1, GL_FALSE, view.m);
-	glUniformMatrix4fv(matrix_location, 1, GL_FALSE, model.m);
-	glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
+	glUniformMatrix4fv(proj_mat_location1, 1, GL_FALSE, persp_proj1.m);
+	glUniformMatrix4fv(view_mat_location1, 1, GL_FALSE, view1.m);
+	glUniformMatrix4fv(matrix_location1, 1, GL_FALSE, model1.m);
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
 
+
+
+
+	glBindVertexArray(VAO[1]);
+	glUseProgram(shaderProgramID2);
+
+
+	int matrix_location2 = glGetUniformLocation(shaderProgramID2, "model");
+	int view_mat_location2 = glGetUniformLocation(shaderProgramID2, "view");
+	int proj_mat_location2 = glGetUniformLocation(shaderProgramID2, "proj");
+
+	mat4 view2 = identity_mat4();
+	mat4 persp_proj2 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model2 = identity_mat4();
+
+	view2 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+	view2 = translate(view2, vec3(x, y, z));
+	model2 = scale(model2, vec3(c, c, c));
+
+	// update uniforms & draw
+	glUniformMatrix4fv(proj_mat_location2, 1, GL_FALSE, persp_proj2.m);
+	glUniformMatrix4fv(view_mat_location2, 1, GL_FALSE, view2.m);
+	glUniformMatrix4fv(matrix_location2, 1, GL_FALSE, model2.m);
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data2.mPointCount);
 
 	// Set up the child matrix
 	/*mat4 modelChild = identity_mat4();
@@ -350,6 +488,7 @@ void display() {
 	//glDrawArrays(GL_TRIANGLES, 0, mesh_data.mPointCount);
 
 	glutSwapBuffers();
+	glBindVertexArray(0);
 }
 
 
@@ -376,8 +515,13 @@ void updateScene() {
 void init()
 {
 	// Set up the shaders
-	GLuint shaderProgramID = CompileShaders();
+	//GLuint shaderProgramID = CompileShaders();
 	// load mesh into a vertex buffer array
+
+	shaderProgramID1 = CompileShaders(pVS1, pFS1);
+	shaderProgramID2 = CompileShaders(pVS2, pFS2);
+
+
 	generateObjectBufferMesh();
 
 }

@@ -26,7 +26,7 @@ MESH TO LOAD
 ----------------------------------------------------------------------------*/
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
-#define MESH_NAME "ufodae.dae"
+#define MESH_NAME "grassScene.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 
@@ -287,6 +287,7 @@ void display() {
 	glUseProgram(shaderProgramID);
 
 
+
 	//Declare your uniform variables that will be used in your shader
 	int matrix_location = glGetUniformLocation(shaderProgramID, "model");
 	int view_mat_location = glGetUniformLocation(shaderProgramID, "view");
@@ -297,6 +298,12 @@ void display() {
 	mat4 model = identity_mat4();
 
 
+	if (input == 'o') {
+		persp_proj = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	}
 
 
 	view = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
@@ -315,12 +322,8 @@ void display() {
 	else if (input == 'z') {
 		model = rotate_z_deg(model, rotate_y);
 	}
-	else if (input == 'o') {
-		persp_proj = orthographic((float)width, (float)height, 0.1f, 1000.0f);
-	}
-	else if (input == 'p') {
-		persp_proj = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	}
+	
+
 
 
 	view = translate(view, vec3(x, y, z));

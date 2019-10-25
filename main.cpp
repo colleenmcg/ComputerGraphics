@@ -58,12 +58,13 @@ int width = 800;
 int height = 600;
 mat4 model = identity_mat4();
 char input;
+float up, down = 0;
 float x, y = 0.0;
 float z = -10.0;
 float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
-float ypos =-1;
+float ypos;
 vec3 cameraPos = vec3(0.0f, 0.0f, 3.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
@@ -351,7 +352,17 @@ void display() {
 		model1 = rotate_z_deg(model1, rotate_y);
 	}
 
-	view1 = translate(view1, vec3(x, ypos, z));
+	
+	if (input == 'a') {
+		view1 = translate(view1, vec3(x, ypos, z));
+	}
+	else if (input == 'q') {
+		view1 = translate(view1, vec3(x, y, z));
+	}	
+	else {
+		view1 = translate(view1, vec3(x, y, z));
+	}
+	
 	model1 = scale(model1, vec3(c, c, c));
 
 	// update uniforms & draw
@@ -359,8 +370,6 @@ void display() {
 	glUniformMatrix4fv(view_mat_location1, 1, GL_FALSE, view1.m);
 	glUniformMatrix4fv(matrix_location1, 1, GL_FALSE, model1.m);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
-
-
 
 
 	glBindVertexArray(VAO[1]);
@@ -375,8 +384,28 @@ void display() {
 	mat4 persp_proj2 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	mat4 model2 = identity_mat4();
 
+
+	if (input == 'o') {
+		persp_proj2 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj2 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	}
+
 	view2 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
+
+	if (input == 'x') {
+		model2 = rotate_x_deg(model2, rotate_y);
+
+	}
+	else if (input == 'y') {
+		model2 = rotate_y_deg(model2, rotate_y);
+
+	}
+	else if (input == 'z') {
+		model2 = rotate_z_deg(model2, rotate_y);
+	}
 
 	view2 = translate(view2, vec3(x, y, z));
 	model2 = scale(model2, vec3(c, c, c));
@@ -408,13 +437,18 @@ void display() {
 
 
 void updateScene() {
+
+	if (down = 1) {
+		if (ypos > y - 8) {
+			ypos -= 0.001;
+		}
+	}
+	else if (up = 1) {
+		if (ypos < y + 8) {
+			ypos += 0.001;
+		}
+	}
 	
-	if (ypos >= -8) {
-		ypos -= 0.001;
-	}
-	else {
-		ypos = -8;
-	}
 	static DWORD last_time = 0;
 	DWORD curr_time = timeGetTime();
 	if (last_time == 0)
@@ -456,16 +490,16 @@ void keypress(unsigned char key, int xx, int yy) {
 	else if (key == 'z') {
 		input = 'z';
 	}
-	else if (key == 'e') {
+	else if (key == 'd') {
 		x += 5.0;
 	}
-	else if (key == 'n') {
+	else if (key == 'w') {
 		y += 5.0;
 	}
 	else if (key == 's') {
 		y += -5.0;
 	}
-	else if (key == 'w') {
+	else if (key == 'a') {
 		x += -5.0;
 	}
 	else if (key == 'c') {
@@ -493,7 +527,18 @@ void keypress(unsigned char key, int xx, int yy) {
 	else if (key == 'h') {
 		cameraPos += cross(normalise(cross(cameraFront, cameraUp)), cameraSpeed);
 	}
-
+	else if (key == 'e') {
+		input = 'a';
+		up = 0;
+		down = 1;
+		ypos = y;
+	}
+	else if (key == 'q') {
+		input = 'q';
+		down = 0;
+		up = 1;
+		ypos = y;	
+	}
 }
 
 int main(int argc, char** argv) {
@@ -508,6 +553,7 @@ int main(int argc, char** argv) {
 	glutDisplayFunc(display);
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
+
 
 	// A call to glewInit() must be done after glut is initialized!
 	GLenum res = glewInit();

@@ -29,6 +29,7 @@ MESH TO LOAD
 // put the mesh in your project directory, or provide a filepath for it here
 #define MESH_NAME_1 "alienPoss.dae"
 #define MESH_NAME_2 "ufoPoss.dae"
+#define MESH_NAME_3 "grassPoss.dae"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 
@@ -44,15 +45,17 @@ typedef struct
 
 using namespace std;
 GLuint shaderProgramID;
-GLuint VAO[2];
-GLuint VBO[2];
+GLuint VAO[3];
+GLuint VBO[3];
 GLuint shaderProgramID2;
 GLuint shaderProgramID1;
+GLuint shaderProgramID3;
 
 
 
 ModelData mesh_data1;
 ModelData mesh_data2;
+ModelData mesh_data3;
 unsigned int mesh_vao = 0;
 int width = 800;
 int height = 600;
@@ -60,16 +63,25 @@ mat4 model = identity_mat4();
 char input;
 float up, down = 0;
 float x, y = 0.0;
+float tx, ty, tz = 0.0;
 float z = -10.0;
 float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
 float ypos;
+float rad = 0.017444444;
 vec3 cameraPos = vec3(0.0f, 0.0f, 3.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
 vec3 cameraFront = vec3(0.0f, 0.0f, -1.0f);
 //float cameraSpeed = 0.05f;
-vec3 cameraSpeed = vec3(0.05f, 0.05f, 0.05f);
+vec3 cameraSpeed = vec3(0.1f, 0.1f, 0.1f);
+float lastX = 400;
+float lastY = 300;
+bool firstMouse = true;
+float yaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
+float pitch = 0.0f;
+bool lbuttonDown = false;
+
 
 
 
@@ -192,7 +204,7 @@ static void AddShader(GLuint ShaderProgram, const char* pShaderText, GLenum Shad
 	glAttachShader(ShaderProgram, ShaderObj);
 }
 
-GLuint CompileShaders()
+GLuint CompileShaders(const char* shaderFile)
 {
 	//Start the process of setting up our shaders by creating a program ID
 	//Note: we will link all the shaders together into this ID
@@ -205,7 +217,7 @@ GLuint CompileShaders()
 	}
 
 	// Create two shader objects, one for the vertex, and one for the fragment shader
-	AddShader(shaderProgramID, "simpleVertexShader.txt", GL_VERTEX_SHADER);
+	AddShader(shaderProgramID, shaderFile, GL_VERTEX_SHADER);
 	AddShader(shaderProgramID, "simpleFragmentShader.txt", GL_FRAGMENT_SHADER);
 
 	GLint Success = 0;
@@ -251,15 +263,16 @@ void generateObjectBufferMesh() {
 	//Might be an idea to do a check for that before generating and binding the buffer.
 
 
-	glGenVertexArrays(2, VAO);
+	glGenVertexArrays(3, VAO);
 	glBindVertexArray(VAO[0]);
 
-	glGenBuffers(2, VBO);
+	glGenBuffers(3, VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
 
 
 	mesh_data1 = load_mesh(MESH_NAME_1);
 	mesh_data2 = load_mesh(MESH_NAME_2);
+	mesh_data3 = load_mesh(MESH_NAME_3);
 
 
 	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mVertices[0], GL_STATIC_DRAW);
@@ -278,16 +291,30 @@ void generateObjectBufferMesh() {
 	
 	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
 
-	loc1 = glGetAttribLocation(shaderProgramID1, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID1, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID1, "vertex_texture");
+	loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
 
 	glEnableVertexAttribArray(loc1);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 	glEnableVertexAttribArray(loc2);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	
+
+	glBindVertexArray(VAO[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+
+	glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mVertices[0], GL_STATIC_DRAW);
+
+	loc1 = glGetAttribLocation(shaderProgramID3, "vertex_position");
+	loc2 = glGetAttribLocation(shaderProgramID3, "vertex_normal");
+	loc3 = glGetAttribLocation(shaderProgramID3, "vertex_texture");
+
+	glEnableVertexAttribArray(loc1);
+	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	glEnableVertexAttribArray(loc2);
+	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
 
 	//	This is for texture coordinates which you don't currently need, so I have commented it out
 	//	unsigned int vt_vbo = 0;
@@ -312,64 +339,6 @@ void display() {
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
 	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-	glBindVertexArray(VAO[0]);
-	glUseProgram(shaderProgramID1);
-
-
-
-	//Declare your uniform variables that will be used in your shader
-	int matrix_location1 = glGetUniformLocation(shaderProgramID1, "model");
-	int view_mat_location1 = glGetUniformLocation(shaderProgramID1, "view");
-	int proj_mat_location1 = glGetUniformLocation(shaderProgramID1, "proj");
-
-	mat4 view1 = identity_mat4();
-	mat4 persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	mat4 model1 = identity_mat4();
-
-
-	if (input == 'o') {
-		persp_proj1 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
-	}
-	else if (input == 'p') {
-		persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	}
-
-
-	view1 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
-
-
-
-	// Root of the Hierarchy
-	if (input == 'x') {
-		model1 = rotate_x_deg(model1, rotate_y);
-
-	}
-	else if (input == 'y') {
-		model1 = rotate_y_deg(model1, rotate_y);
-
-	}
-	else if (input == 'z') {
-		model1 = rotate_z_deg(model1, rotate_y);
-	}
-
-	
-	if (input == 'a') {
-		view1 = translate(view1, vec3(x, ypos, z));
-	}
-	else if (input == 'q') {
-		view1 = translate(view1, vec3(x, y, z));
-	}	
-	else {
-		view1 = translate(view1, vec3(x, y, z));
-	}
-	
-	model1 = scale(model1, vec3(c, c, c));
-
-	// update uniforms & draw
-	glUniformMatrix4fv(proj_mat_location1, 1, GL_FALSE, persp_proj1.m);
-	glUniformMatrix4fv(view_mat_location1, 1, GL_FALSE, view1.m);
-	glUniformMatrix4fv(matrix_location1, 1, GL_FALSE, model1.m);
-	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
 
 
 	glBindVertexArray(VAO[1]);
@@ -416,6 +385,97 @@ void display() {
 	glUniformMatrix4fv(matrix_location2, 1, GL_FALSE, model2.m);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data2.mPointCount);
 
+
+	glBindVertexArray(VAO[0]);
+	glUseProgram(shaderProgramID1);
+
+
+
+	//Declare your uniform variables that will be used in your shader
+	int matrix_location1 = glGetUniformLocation(shaderProgramID1, "model");
+	int view_mat_location1 = glGetUniformLocation(shaderProgramID1, "view");
+	int proj_mat_location1 = glGetUniformLocation(shaderProgramID1, "proj");
+
+	mat4 view1 = identity_mat4();
+	mat4 persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model1 = identity_mat4();
+	model1 = model1 * model2;
+
+	if (input == 'o') {
+		persp_proj1 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	}
+
+
+	view1 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+
+	// Root of the Hierarchy
+	if (input == 'x') {
+		model1 = rotate_x_deg(model1, rotate_y);
+
+	}
+	else if (input == 'y') {
+		model1 = rotate_y_deg(model1, rotate_y);
+
+	}
+	else if (input == 'z') {
+		model1 = rotate_z_deg(model1, rotate_y);
+	}
+
+	
+	if (input == 'a') {
+		view1 = translate(view1, vec3(x, ypos, z));
+	}
+	else if (input == 'q') {
+		view1 = translate(view1, vec3(x, y, z));
+	}	
+	else {
+		view1 = translate(view1, vec3(x, y, z));
+	}
+	
+	model1 = scale(model1, vec3(c, c, c));
+
+	// update uniforms & draw
+	glUniformMatrix4fv(proj_mat_location1, 1, GL_FALSE, persp_proj1.m);
+	glUniformMatrix4fv(view_mat_location1, 1, GL_FALSE, view1.m);
+	glUniformMatrix4fv(matrix_location1, 1, GL_FALSE, model1.m);
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
+
+
+	
+
+	glBindVertexArray(VAO[2]);
+	glUseProgram(shaderProgramID3);
+
+	int matrix_location3 = glGetUniformLocation(shaderProgramID3, "model");
+	int view_mat_location3 = glGetUniformLocation(shaderProgramID3, "view");
+	int proj_mat_location3 = glGetUniformLocation(shaderProgramID3, "proj");
+
+	mat4 view3 = identity_mat4();
+	mat4 persp_proj3 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model3 = identity_mat4();
+
+
+	if (input == 'o') {
+		persp_proj3 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj3 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	}
+
+
+	view3 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+	// update uniforms & draw
+	glUniformMatrix4fv(proj_mat_location3, 1, GL_FALSE, persp_proj3.m);
+	glUniformMatrix4fv(view_mat_location3, 1, GL_FALSE, view3.m);
+	glUniformMatrix4fv(matrix_location3, 1, GL_FALSE, model3.m);
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data3.mPointCount);
 	// Set up the child matrix
 	/*mat4 modelChild = identity_mat4();
 	modelChild = rotate_z_deg(modelChild, 180);
@@ -471,9 +531,9 @@ void init()
 	//GLuint shaderProgramID = CompileShaders();
 	// load mesh into a vertex buffer array
 
-	shaderProgramID1 = CompileShaders();
-	shaderProgramID2 = CompileShaders();
-
+	shaderProgramID1 = CompileShaders("simpleVertexShader.txt");
+	shaderProgramID2 = CompileShaders("simpleVertexShader.txt");
+	shaderProgramID3 = CompileShaders("grassShader.txt");
 
 	generateObjectBufferMesh();
 
@@ -515,7 +575,6 @@ void keypress(unsigned char key, int xx, int yy) {
 		input = 'p';
 	}
 	else if (key == 't') {
-
 		cameraPos += cross(cameraFront, (cameraSpeed));
 	}
 	else if (key == 'f') {
@@ -539,7 +598,56 @@ void keypress(unsigned char key, int xx, int yy) {
 		up = 1;
 		ypos = y;	
 	}
+} 
+
+void mouse(int button, int state, int x, int y)
+{
+	if (button == GLUT_LEFT_BUTTON)
+	{
+		if (state == GLUT_DOWN)
+			lbuttonDown = true;
+		else
+			lbuttonDown = false;
+	}
 }
+
+void motion(int xpos, int ypos)
+{
+	if (lbuttonDown) {
+		if (firstMouse)
+		{
+			lastX = xpos;
+			lastY = ypos;
+			firstMouse = false;
+		}
+
+		float xoffset = xpos - lastX;
+		float yoffset = lastY - ypos;
+		lastX = xpos;
+		lastY = ypos;
+
+		float sensitivity = 0.05;
+		xoffset *= sensitivity;
+		yoffset *= sensitivity;
+
+		yaw += xoffset;
+		pitch += yoffset;
+
+		if (pitch > 150.0f)
+			pitch = 150.0f;
+		if (pitch < -150.0f)
+			pitch = -150.0f;
+
+
+		vec3 front = vec3(cos((rad *(yaw)) * cos((rad *(pitch)))), sin(rad * (pitch)), sin(rad * (yaw)) * cos(rad * (pitch)));
+		cameraFront = normalise(front);
+	}
+	else {
+		firstMouse = true;
+	}
+}
+
+
 
 int main(int argc, char** argv) {
 
@@ -553,6 +661,9 @@ int main(int argc, char** argv) {
 	glutDisplayFunc(display);
 	glutIdleFunc(updateScene);
 	glutKeyboardFunc(keypress);
+	glutMouseFunc(mouse);
+	glutMotionFunc(motion);
+
 
 
 	// A call to glewInit() must be done after glut is initialized!

@@ -10,7 +10,6 @@
 // OpenGL includes
 #include <GL/glew.h>
 #include <GL/freeglut.h>
-#include <C:\Users\Sarah\Documents\Colleen\Lab 04 - Sample Object Hierarchy\glm\glm\glm.hpp>
 
 // Assimp includes
 #include <assimp/cimport.h> // scene importer
@@ -20,8 +19,6 @@
 // Project includes
 #include "maths_funcs.h"
 
-
-
 /*----------------------------------------------------------------------------
 MESH TO LOAD
 ----------------------------------------------------------------------------*/
@@ -30,6 +27,8 @@ MESH TO LOAD
 #define MESH_NAME_1 "alienPoss.dae"
 #define MESH_NAME_2 "ufoPoss.dae"
 #define MESH_NAME_3 "grassPoss.dae"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 /*----------------------------------------------------------------------------
 ----------------------------------------------------------------------------*/
 
@@ -46,7 +45,7 @@ typedef struct
 using namespace std;
 GLuint shaderProgramID;
 GLuint VAO[3];
-GLuint VBO[3];
+GLuint VBO[9];
 GLuint shaderProgramID2;
 GLuint shaderProgramID1;
 GLuint shaderProgramID3;
@@ -81,7 +80,7 @@ bool firstMouse = true;
 float yaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
 float pitch = 0.0f;
 bool lbuttonDown = false;
-
+unsigned int texture;
 
 
 
@@ -261,73 +260,165 @@ void generateObjectBufferMesh() {
 
 	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
 	//Might be an idea to do a check for that before generating and binding the buffer.
+	//unsigned int texture;
+	glGenTextures(1, &texture);
+	glBindTexture(GL_TEXTURE_2D, texture);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	glGenVertexArrays(3, VAO);
-	glBindVertexArray(VAO[0]);
-
-	glGenBuffers(3, VBO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
-
+	int width, height, nrChannels;
+	unsigned char *data = stbi_load("grassText.jpg", &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTexture"), 0);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 
 	mesh_data1 = load_mesh(MESH_NAME_1);
 	mesh_data2 = load_mesh(MESH_NAME_2);
 	mesh_data3 = load_mesh(MESH_NAME_3);
 
-
-	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mVertices[0], GL_STATIC_DRAW);
-
 	loc1 = glGetAttribLocation(shaderProgramID1, "vertex_position");
 	loc2 = glGetAttribLocation(shaderProgramID1, "vertex_normal");
 	loc3 = glGetAttribLocation(shaderProgramID1, "vertex_texture");
 
+
+	//Alien
+	
+
+	glGenBuffers(1, &VBO[0]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mVertices[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &VBO[1]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data1.mPointCount * sizeof(vec3), &mesh_data1.mNormals[0], GL_STATIC_DRAW);
+
+
+	glGenVertexArrays(1, &VAO[0]);
+	glBindVertexArray(VAO[0]);
+
 	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[0]);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
 	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	glBindVertexArray(VAO[1]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-	
+
+	//UFO
+
+
+	glGenBuffers(1, &VBO[2]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
 	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
 
-	loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
+	glGenBuffers(1, &VBO[3]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mNormals[0], GL_STATIC_DRAW);
+
+
+	glGenVertexArrays(1, &VAO[1]);
+	glBindVertexArray(VAO[1]);
 
 	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
 	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
+	//Grass
 
-	glBindVertexArray(VAO[2]);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-
+	glGenBuffers(1, &VBO[4]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
 	glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mVertices[0], GL_STATIC_DRAW);
 
-	loc1 = glGetAttribLocation(shaderProgramID3, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID3, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID3, "vertex_texture");
+	glGenBuffers(1, &VBO[5]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mNormals[0], GL_STATIC_DRAW);
+
+	glGenBuffers(1, &VBO[6]);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[6]);
+	glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec2), &mesh_data3.mTextureCoords[0], GL_STATIC_DRAW);
+
+	glGenVertexArrays(1, &VAO[2]);
+	glBindVertexArray(VAO[2]);
 
 	glEnableVertexAttribArray(loc1);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[4]);
 	glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
 	glEnableVertexAttribArray(loc2);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[5]);
 	glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-
-	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	unsigned int vt_vbo = 0;
-	//	glGenBuffers (1, &vt_vbo);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glBufferData (GL_ARRAY_BUFFER, monkey_head_data.mTextureCoords * sizeof (vec2), &monkey_head_data.mTextureCoords[0], GL_STATIC_DRAW);
+	glEnableVertexAttribArray(loc3);
+	glBindBuffer(GL_ARRAY_BUFFER, VBO[6]);
+	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 
+	//glBindVertexArray(VAO[1]);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
 
-	//	This is for texture coordinates which you don't currently need, so I have commented it out
-	//	glEnableVertexAttribArray (loc3);
-	//	glBindBuffer (GL_ARRAY_BUFFER, vt_vbo);
-	//	glVertexAttribPointer (loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+	//glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mNormals[0], GL_STATIC_DRAW);
+
+	//loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
+	//loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
+	//loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
+
+	//glEnableVertexAttribArray(loc1);
+	//glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	//glEnableVertexAttribArray(loc2);
+	//glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	////This is for texture coordinates which you don't currently need, so I have commented it out
+	//
+
+	////Grass
+	//glBindVertexArray(VAO[2]);
+	//glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
+
+	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mVertices[0], GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mNormals[0], GL_STATIC_DRAW);
+	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec2), &mesh_data3.mTextureCoords[0], GL_STATIC_DRAW);
+
+	//loc1 = glGetAttribLocation(shaderProgramID3, "vertex_position");
+	//loc2 = glGetAttribLocation(shaderProgramID3, "vertex_normal");
+	//loc3 = glGetAttribLocation(shaderProgramID3, "vertex_texture");
+
+	//glEnableVertexAttribArray(loc1);
+	//glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	//glEnableVertexAttribArray(loc2);
+	//glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+	//glEnableVertexAttribArray(loc3);
+	//glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	//unsigned int vt_vbo = 0;
+	//glGenBuffers(1, &vt_vbo);
+	//glBindBuffer(GL_ARRAY_BUFFER, BVO);
+	
+
+
+	//This is for texture coordinates which you don't currently need, so I have commented it out
+	//glEnableVertexAttribArray(loc3);
+	//glBindBuffer(GL_ARRAY_BUFFER, vt_vbo);
+	//glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
+
+
+	
 }
 #pragma endregion VBO_FUNCTIONS
 
@@ -337,7 +428,7 @@ void display() {
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glEnable(GL_DEPTH_TEST); // enable depth-testing
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
-	glClearColor(0.5f, 0.5f, 0.5f, 1.0f);
+	glClearColor(0.5f, 0.8f, 0.9f, 1.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 
@@ -399,7 +490,7 @@ void display() {
 	mat4 view1 = identity_mat4();
 	mat4 persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	mat4 model1 = identity_mat4();
-	model1 = model1 * model2;
+	//model1 = model1 * model2;
 
 	if (input == 'o') {
 		persp_proj1 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
@@ -426,17 +517,17 @@ void display() {
 		model1 = rotate_z_deg(model1, rotate_y);
 	}
 
-	
+
 	if (input == 'a') {
 		view1 = translate(view1, vec3(x, ypos, z));
 	}
 	else if (input == 'q') {
 		view1 = translate(view1, vec3(x, y, z));
-	}	
+	}
 	else {
 		view1 = translate(view1, vec3(x, y, z));
 	}
-	
+
 	model1 = scale(model1, vec3(c, c, c));
 
 	// update uniforms & draw
@@ -446,9 +537,10 @@ void display() {
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
 
 
-	
 
+	glBindTexture(GL_TEXTURE_2D, texture);
 	glBindVertexArray(VAO[2]);
+	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
 	glUseProgram(shaderProgramID3);
 
 	int matrix_location3 = glGetUniformLocation(shaderProgramID3, "model");
@@ -475,6 +567,7 @@ void display() {
 	glUniformMatrix4fv(proj_mat_location3, 1, GL_FALSE, persp_proj3.m);
 	glUniformMatrix4fv(view_mat_location3, 1, GL_FALSE, view3.m);
 	glUniformMatrix4fv(matrix_location3, 1, GL_FALSE, model3.m);
+	glBindTexture(GL_TEXTURE_2D, texture);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data3.mPointCount);
 	// Set up the child matrix
 	/*mat4 modelChild = identity_mat4();
@@ -500,7 +593,7 @@ void updateScene() {
 
 	if (down = 1) {
 		if (ypos > y - 8) {
-			ypos -= 0.001;
+			ypos -= 0.03;
 		}
 	}
 	else if (up = 1) {
@@ -508,7 +601,7 @@ void updateScene() {
 			ypos += 0.001;
 		}
 	}
-	
+
 	static DWORD last_time = 0;
 	DWORD curr_time = timeGetTime();
 	if (last_time == 0)
@@ -533,7 +626,7 @@ void init()
 
 	shaderProgramID1 = CompileShaders("simpleVertexShader.txt");
 	shaderProgramID2 = CompileShaders("simpleVertexShader.txt");
-	shaderProgramID3 = CompileShaders("grassShader.txt");
+	shaderProgramID3 = CompileShaders("simpleVertexShader.txt");
 
 	generateObjectBufferMesh();
 
@@ -596,9 +689,9 @@ void keypress(unsigned char key, int xx, int yy) {
 		input = 'q';
 		down = 0;
 		up = 1;
-		ypos = y;	
+		ypos = y;
 	}
-} 
+}
 
 void mouse(int button, int state, int x, int y)
 {
@@ -679,4 +772,3 @@ int main(int argc, char** argv) {
 	glutMainLoop();
 	return 0;
 }
-

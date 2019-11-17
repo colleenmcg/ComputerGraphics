@@ -43,6 +43,7 @@ typedef struct
 } ModelData;
 #pragma endregion SimpleTypes
 
+
 using namespace std;
 GLuint shaderProgramID;
 GLuint VAO[5];
@@ -63,8 +64,8 @@ int width = 800;
 int height = 600;
 mat4 model = identity_mat4();
 char input;
-float up, down = 0;
-float x, y = 0.0;
+float up, down, moveR = 0;
+float x, y, X, Y= 0.0;
 float tx, ty, tz = 0.0;
 float z = -10.0;
 float v = 0.0;
@@ -84,6 +85,7 @@ float yaw = -90.0f;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 re
 float pitch = 0.0f;
 bool lbuttonDown = false;
 unsigned int gtexture;
+unsigned int g1texture;
 unsigned int utexture;
 unsigned int btexture;
 
@@ -272,27 +274,7 @@ void generateObjectBufferMesh() {
 	//Note: you may get an error "vector subscript out of range" if you are using this code for a mesh that doesnt have positions and normals
 	//Might be an idea to do a check for that before generating and binding the buffer.
 	//unsigned int texture;
-	glGenTextures(1, &gtexture);
-	glBindTexture(GL_TEXTURE_2D, gtexture);
-
-
-	int wG, hG, nrChannelsG;
-	unsigned char *grass = stbi_load("grassText1.jpg", &wG, &hG, &nrChannelsG, 0);
-	if (grass)
-	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wG, hG, 0, GL_RGB, GL_UNSIGNED_BYTE, grass);
-		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(grass);
-		glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG"), 0);
-	}
-	else
-	{
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	
 
 
 	mesh_data1 = load_mesh(MESH_NAME_1);//alien
@@ -341,6 +323,11 @@ void generateObjectBufferMesh() {
 	glGenTextures(1, &utexture);
 	glBindTexture(GL_TEXTURE_2D, utexture);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
 
 	int wU, hU, nrChannelsU;
 	unsigned char *UFO = stbi_load("metal.jpg", &wU, &hU, &nrChannelsU, 0);
@@ -348,21 +335,18 @@ void generateObjectBufferMesh() {
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wU, hU, 0, GL_RGB, GL_UNSIGNED_BYTE, UFO);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(UFO);
-		glUniform1i(glGetUniformLocation(shaderProgramID2, "ourTextureU"), 0);
+		
 	}
 	else
 	{
 		std::cout << "Failed to load texture" << std::endl;
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-	loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
-	loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
-	loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
+	stbi_image_free(UFO);
+
+	loc1 = glGetAttribLocation(shaderProgramID2, "inputPosition");
+	loc2 = glGetAttribLocation(shaderProgramID2, "inputNormal");
+	loc3 = glGetAttribLocation(shaderProgramID2, "inputTexCoord");
 
 	glGenBuffers(1, &VBO[3]);
 	glBindBuffer(GL_ARRAY_BUFFER, VBO[3]);
@@ -397,6 +381,10 @@ void generateObjectBufferMesh() {
 	glGenTextures(1, &btexture);
 	glBindTexture(GL_TEXTURE_2D, btexture);
 
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int wB, hB, nrChannelsB;
 	unsigned char *beam = stbi_load("beams.jpg", &wB, &hB, &nrChannelsB, 0);
@@ -404,17 +392,13 @@ void generateObjectBufferMesh() {
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wB, hB, 0, GL_RGB, GL_UNSIGNED_BYTE, beam);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		stbi_image_free(beam);
-		glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureB"), 0);
+	
 	}
 	else
 	{
 		std::cout << "Failed to load texture" << std::endl;
 	}
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	stbi_image_free(beam);
 
 	loc1 = glGetAttribLocation(shaderProgramID4, "vertex_position");
 	loc2 = glGetAttribLocation(shaderProgramID4, "vertex_normal");
@@ -450,6 +434,67 @@ void generateObjectBufferMesh() {
 
 	//Grass
 
+	//glActiveTexture(GL_TEXTURE0);
+
+	
+	glGenTextures(1, &gtexture);
+	glBindTexture(GL_TEXTURE_2D, gtexture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	int wG, hG, nrChannelsG;
+	unsigned char *grass = stbi_load("grassText1.jpg", &wG, &hG, &nrChannelsG, 0);
+	if (grass)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wG, hG, 0, GL_RGB, GL_UNSIGNED_BYTE, grass);
+		glGenerateMipmap(GL_TEXTURE_2D);
+		//stbi_image_free(grass);
+		//glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG"), 0);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+
+
+	//glActiveTexture(0);
+	//glBindTexture(GL_TEXTURE_2D, 0);
+	stbi_image_free(grass);
+
+
+
+
+	glActiveTexture(GL_TEXTURE1);
+	glGenTextures(1, &g1texture);
+	glBindTexture(GL_TEXTURE_2D, g1texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+
+	int wG1, hG1, nrChannelsG1;
+	unsigned char *grass1 = stbi_load("grassTextSecond.jpg", &wG1, &hG1, &nrChannelsG1, 0);
+	if (grass1)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wG1, hG1, 0, GL_RGB, GL_UNSIGNED_BYTE, grass1);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+
+	stbi_image_free(grass1);
+
+
+
 	loc1 = glGetAttribLocation(shaderProgramID3, "vertex_position");
 	loc2 = glGetAttribLocation(shaderProgramID3, "vertex_normal");
 	loc3 = glGetAttribLocation(shaderProgramID3, "vertex_texture");
@@ -482,54 +527,6 @@ void generateObjectBufferMesh() {
 	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 
-	//glBindVertexArray(VAO[1]);
-	//glBindBuffer(GL_ARRAY_BUFFER, VBO[1]);
-
-	//glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mVertices[0], GL_STATIC_DRAW);
-	//glBufferData(GL_ARRAY_BUFFER, mesh_data2.mPointCount * sizeof(vec3), &mesh_data2.mNormals[0], GL_STATIC_DRAW);
-
-	//loc1 = glGetAttribLocation(shaderProgramID2, "vertex_position");
-	//loc2 = glGetAttribLocation(shaderProgramID2, "vertex_normal");
-	//loc3 = glGetAttribLocation(shaderProgramID2, "vertex_texture");
-
-	//glEnableVertexAttribArray(loc1);
-	//glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	//glEnableVertexAttribArray(loc2);
-	//glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	////This is for texture coordinates which you don't currently need, so I have commented it out
-	//
-
-	////Grass
-	//glBindVertexArray(VAO[2]);
-	//glBindBuffer(GL_ARRAY_BUFFER, VBO[2]);
-
-	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mVertices[0], GL_STATIC_DRAW);
-	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec3), &mesh_data3.mNormals[0], GL_STATIC_DRAW);
-	//glBufferData(GL_ARRAY_BUFFER, mesh_data3.mPointCount * sizeof(vec2), &mesh_data3.mTextureCoords[0], GL_STATIC_DRAW);
-
-	//loc1 = glGetAttribLocation(shaderProgramID3, "vertex_position");
-	//loc2 = glGetAttribLocation(shaderProgramID3, "vertex_normal");
-	//loc3 = glGetAttribLocation(shaderProgramID3, "vertex_texture");
-
-	//glEnableVertexAttribArray(loc1);
-	//glVertexAttribPointer(loc1, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	//glEnableVertexAttribArray(loc2);
-	//glVertexAttribPointer(loc2, 3, GL_FLOAT, GL_FALSE, 0, NULL);
-	//glEnableVertexAttribArray(loc3);
-	//glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
-	//unsigned int vt_vbo = 0;
-	//glGenBuffers(1, &vt_vbo);
-	//glBindBuffer(GL_ARRAY_BUFFER, BVO);
-
-
-
-	//This is for texture coordinates which you don't currently need, so I have commented it out
-	//glEnableVertexAttribArray(loc3);
-	//glBindBuffer(GL_ARRAY_BUFFER, vt_vbo);
-	//glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
-
 
 
 }
@@ -545,15 +542,17 @@ void display() {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	//UFO
-	glEnable(GL_TEXTURE_2D);
+	glUseProgram(shaderProgramID2);
+	glUniform1i(glGetUniformLocation(shaderProgramID2, "ourTextureU"), 0);
+
 	glBindTexture(GL_TEXTURE_2D, utexture);
 	glBindVertexArray(VAO[1]);
-	glUseProgram(shaderProgramID2);
+	
 
 
-	int matrix_location2 = glGetUniformLocation(shaderProgramID2, "model");
-	int view_mat_location2 = glGetUniformLocation(shaderProgramID2, "view");
-	int proj_mat_location2 = glGetUniformLocation(shaderProgramID2, "proj");
+	int matrix_location2 = glGetUniformLocation(shaderProgramID2, "normalMat");
+	int view_mat_location2 = glGetUniformLocation(shaderProgramID2, "modelview");
+	int proj_mat_location2 = glGetUniformLocation(shaderProgramID2, "projection");
 
 	mat4 view2 = identity_mat4();
 	mat4 persp_proj2 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
@@ -589,14 +588,18 @@ void display() {
 	glUniformMatrix4fv(proj_mat_location2, 1, GL_FALSE, persp_proj2.m);
 	glUniformMatrix4fv(view_mat_location2, 1, GL_FALSE, view2.m);
 	glUniformMatrix4fv(matrix_location2, 1, GL_FALSE, model2.m);
-	glBindTexture(GL_TEXTURE_2D, utexture);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data2.mPointCount);
 
 	//UFO beams
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, btexture);
-	glBindVertexArray(VAO[2]);
 	glUseProgram(shaderProgramID4);
+
+	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureB"), 0);
+
+	glBindTexture(GL_TEXTURE_2D, btexture);
+
+
+	glBindVertexArray(VAO[2]);
+	
 
 
 	int matrix_location4 = glGetUniformLocation(shaderProgramID4, "model");
@@ -638,12 +641,14 @@ void display() {
 	glUniformMatrix4fv(proj_mat_location4, 1, GL_FALSE, persp_proj4.m);
 	glUniformMatrix4fv(view_mat_location4, 1, GL_FALSE, view4.m);
 	glUniformMatrix4fv(matrix_location4, 1, GL_FALSE, model4.m);
-	glBindTexture(GL_TEXTURE_2D, btexture);
+
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data4.mPointCount);
 
 	//ALIEN
-	glBindVertexArray(VAO[0]);
 	glUseProgram(shaderProgramID1);
+
+	glBindVertexArray(VAO[0]);
+
 
 
 
@@ -703,11 +708,24 @@ void display() {
 
 
 	//GRASS
-	glEnable(GL_TEXTURE_2D);
-	glBindTexture(GL_TEXTURE_2D, gtexture);
-	glBindVertexArray(VAO[3]);
-	//glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
 	glUseProgram(shaderProgramID3);
+
+	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG"), 0);
+	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG1"), 1);
+	
+
+	
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, gtexture);
+	glActiveTexture(GL_TEXTURE0);
+
+	glActiveTexture(GL_TEXTURE1);
+	glBindTexture(GL_TEXTURE_2D, g1texture);
+	glActiveTexture(GL_TEXTURE0);
+
+	glBindVertexArray(VAO[3]);
+
 
 	int matrix_location3 = glGetUniformLocation(shaderProgramID3, "model");
 	int view_mat_location3 = glGetUniformLocation(shaderProgramID3, "view");
@@ -733,10 +751,10 @@ void display() {
 	glUniformMatrix4fv(proj_mat_location3, 1, GL_FALSE, persp_proj3.m);
 	glUniformMatrix4fv(view_mat_location3, 1, GL_FALSE, view3.m);
 	glUniformMatrix4fv(matrix_location3, 1, GL_FALSE, model3.m);
-	glBindTexture(GL_TEXTURE_2D, gtexture);
+
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data3.mPointCount);
 
-	glDisable(GL_TEXTURE_2D);
+	//glDisable(GL_TEXTURE_2D);
 	glutSwapBuffers();
 	glBindVertexArray(0);
 }
@@ -755,6 +773,9 @@ void updateScene() {
 		if (ypos < y + 8) {
 			ypos += 0.001;
 		}
+	}
+	else if (moveR = 1) {
+		X += 0.001;
 	}
 
 	static DWORD last_time = 0;
@@ -847,6 +868,9 @@ void keypress(unsigned char key, int xx, int yy) {
 		down = 0;
 		up = 1;
 		ypos = y;
+	}
+	else if (key == GLUT_KEY_RIGHT) {
+		 moveR = 1;
 	}
 }
 

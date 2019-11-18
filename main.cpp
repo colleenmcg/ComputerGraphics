@@ -3,9 +3,10 @@
 #include <mmsystem.h>
 #include <iostream>
 #include <string>
-#include <stdio.h>
+#include <cstdio>
 #include <math.h>
 #include <vector> // STL dynamic memory.
+
 
 // OpenGL includes
 #include <GL/glew.h>
@@ -44,6 +45,98 @@ typedef struct
 #pragma endregion SimpleTypes
 
 
+float skyboxVertices[] = {
+	// positions          
+	-1.0f,  1.0f, -1.0f,
+	-1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f, -1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+
+	-1.0f, -1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f,
+	-1.0f, -1.0f,  1.0f,
+
+	-1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f, -1.0f,
+	 1.0f,  1.0f,  1.0f,
+	 1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f,  1.0f,
+	-1.0f,  1.0f, -1.0f,
+
+	-1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f, -1.0f,
+	 1.0f, -1.0f, -1.0f,
+	-1.0f, -1.0f,  1.0f,
+	 1.0f, -1.0f,  1.0f
+};
+
+float cubeVertices[] = {
+	// positions          // texture Coords
+	-10.0f,  10.0f, -10.0f,
+  -10.0f, -10.0f, -10.0f,
+   10.0f, -10.0f, -10.0f,
+   10.0f, -10.0f, -10.0f,
+   10.0f,  10.0f, -10.0f,
+  -10.0f,  10.0f, -10.0f,
+
+  -10.0f, -10.0f,  10.0f,
+  -10.0f, -10.0f, -10.0f,
+  -10.0f,  10.0f, -10.0f,
+  -10.0f,  10.0f, -10.0f,
+  -10.0f,  10.0f,  10.0f,
+  -10.0f, -10.0f,  10.0f,
+
+   10.0f, -10.0f, -10.0f,
+   10.0f, -10.0f,  10.0f,
+   10.0f,  10.0f,  10.0f,
+   10.0f,  10.0f,  10.0f,
+   10.0f,  10.0f, -10.0f,
+   10.0f, -10.0f, -10.0f,
+
+  -10.0f, -10.0f,  10.0f,
+  -10.0f,  10.0f,  10.0f,
+   10.0f,  10.0f,  10.0f,
+   10.0f,  10.0f,  10.0f,
+   10.0f, -10.0f,  10.0f,
+  -10.0f, -10.0f,  10.0f,
+
+  -10.0f,  10.0f, -10.0f,
+   10.0f,  10.0f, -10.0f,
+   10.0f,  10.0f,  10.0f,
+   10.0f,  10.0f,  10.0f,
+  -10.0f,  10.0f,  10.0f,
+  -10.0f,  10.0f, -10.0f,
+
+  -10.0f, -10.0f, -10.0f,
+  -10.0f, -10.0f,  10.0f,
+   10.0f, -10.0f, -10.0f,
+   10.0f, -10.0f, -10.0f,
+  -10.0f, -10.0f,  10.0f,
+   10.0f, -10.0f,  10.0f
+};
+
+
+
 using namespace std;
 GLuint shaderProgramID;
 GLuint VAO[5];
@@ -52,6 +145,8 @@ GLuint shaderProgramID1;
 GLuint shaderProgramID2;
 GLuint shaderProgramID3;
 GLuint shaderProgramID4;
+GLuint shaderProgramID5;
+GLuint shaderProgramID6;
 
 
 
@@ -88,6 +183,20 @@ unsigned int gtexture;
 unsigned int g1texture;
 unsigned int utexture;
 unsigned int btexture;
+unsigned int skyboxT;
+GLuint cubeT;
+unsigned int cubeVAO, cubeVBO;
+unsigned int skyboxVAO, skyboxVBO;
+
+vector<std::string> faces =
+{
+	"right.jpg",
+		"left.jpg",
+		"up.jpg",
+		"down.png",
+		"front.jpg",
+		"back.png"
+};
 
 
 
@@ -434,8 +543,6 @@ void generateObjectBufferMesh() {
 
 	//Grass
 
-	//glActiveTexture(GL_TEXTURE0);
-
 	
 	glGenTextures(1, &gtexture);
 	glBindTexture(GL_TEXTURE_2D, gtexture);
@@ -529,8 +636,113 @@ void generateObjectBufferMesh() {
 
 
 
+	//cube and skybox
+
+	//
+	//glGenBuffers(1, &cubeVBO);
+	//glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+	//glBufferData(GL_ARRAY_BUFFER, 3 * 36 * sizeof(float), &cubeVertices, GL_STATIC_DRAW);
+
+
+	//glGenVertexArrays(1, &cubeVAO);
+	//glBindVertexArray(cubeVAO);
+	//glEnableVertexAttribArray(0);
+	//glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+
+	//create_cube_map("front.jpg", "back.png", "up.jpg", "down.png", "left.jpg", "right.jpg", &cubeT);
+	//	
+
+
+
+	//glGenVertexArrays(1, &skyboxVAO);
+	//glGenBuffers(1, &skyboxVBO);
+	//glBindVertexArray(skyboxVAO);
+	//glBindBuffer(GL_ARRAY_BUFFER, skyboxVBO);
+	//glBufferData(GL_ARRAY_BUFFER, sizeof(skyboxVertices), &skyboxVertices, GL_STATIC_DRAW);
+	//glEnableVertexAttribArray(0);
+	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(GLfloat), (GLvoid*)0);
+
+
+
+	//glGenTextures(1, &cubeT);
+	//glBindTexture(GL_TEXTURE_2D, cubeT);
+
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+	//int wC, hC, nrChannelsC;
+	//unsigned char *cube = stbi_load("marble.jpg", &wC, &hC, &nrChannelsC, 0);
+	//if (cube)
+	//{
+
+	//	GLenum format;
+	//	if (nrChannelsC == 1)
+	//		format = GL_RED;
+	//	else if (nrChannelsC == 3)
+	//		format = GL_RGB;
+	//	else if (nrChannelsC == 4)
+	//		format = GL_RGBA;
+
+	//	//glBindTexture(GL_TEXTURE_2D, cubeT);
+	//	glTexImage2D(GL_TEXTURE_2D, 0, format, wC, hC, 0, format, GL_UNSIGNED_BYTE, cube);
+	//	glGenerateMipmap(GL_TEXTURE_2D);
+	//	stbi_image_free(cube);
+	//	glBindTexture(GL_TEXTURE_2D, 0);
+
+	//}
+	//else
+	//{
+	//	std::cout << "Failed to load texture" << std::endl;
+	//}
+	//
+
+
+
+
+
+	//skybox
+	
+	//glGenTextures(1, &skyboxT);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxT);
+
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+
+	//int wS, hS, nrChannelsS;
+	////unsigned char *sky;
+	//for (unsigned int i = 0; i < faces.size(); i++)
+	//{
+	//	unsigned char *sky = stbi_load(faces[i].c_str(), &wS, &hS, &nrChannelsS, 0);
+	//	if (sky)
+	//	{
+	//		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, wS, hS, 0, GL_RGB, GL_UNSIGNED_BYTE, sky);
+	//		stbi_image_free(sky);
+	//	}
+	//	else
+	//	{
+	//		std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+	//		stbi_image_free(sky);
+	//	}
+	//}
+	////glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+
+
+	//glUseProgram(shaderProgramID6);
+	//glUniform1i(glGetUniformLocation(shaderProgramID6, "texture1"), 0);
+	//glUseProgram(shaderProgramID5);
+	//glUniform1i(glGetUniformLocation(shaderProgramID5, "skybox"), 0);
+
 }
 #pragma endregion VBO_FUNCTIONS
+
 
 
 void display() {
@@ -754,6 +966,105 @@ void display() {
 
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data3.mPointCount);
 
+	//cube
+
+	//int view_mat_location5 = glGetUniformLocation(shaderProgramID5, "view");
+	//mat4 view5 = identity_mat4();
+	//view5 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+	//vec3 currentPos = cameraPos;
+	//if (cameraPos.v != currentPos.v) {
+	//	mat4 R = rotate_y_deg(identity_mat4(), -yaw);
+	//	glUseProgram(shaderProgramID5);
+	//	glUniformMatrix4fv(view_mat_location5, 1, GL_FALSE, R.m);
+	//}
+
+	//glDepthMask(GL_FALSE);
+	//glUseProgram(shaderProgramID5);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, cubeT);
+	//glBindVertexArray(cubeVAO);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glDepthMask(GL_TRUE);
+
+	//glUseProgram(shaderProgramID6);
+
+	//mat4 model6 = identity_mat4();
+	//mat4 view6 = identity_mat4();
+	//mat4 persp_proj6 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+
+
+
+	//int matrix_location6 = glGetUniformLocation(shaderProgramID6, "model");
+	//int view_mat_location6 = glGetUniformLocation(shaderProgramID6, "view");
+	//int proj_mat_location6 = glGetUniformLocation(shaderProgramID6, "proj");
+
+	//if (input == 'o') {
+	//	persp_proj6 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	//}
+	//else if (input == 'p') {
+	//	persp_proj6 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	//}
+
+	//view6 = look_at(cameraPos, cameraPos + cameraFront, cameraUp); 
+
+	//glUniformMatrix4fv(proj_mat_location6, 1, GL_FALSE, persp_proj6.m);
+	//glUniformMatrix4fv(view_mat_location6, 1, GL_FALSE, view6.m);
+	//glUniformMatrix4fv(matrix_location6, 1, GL_FALSE, model6.m);
+
+	//
+	//glBindVertexArray(cubeVAO);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_2D, cubeT);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glBindVertexArray(0);
+	
+
+
+
+	
+
+	
+	//sky
+
+
+	//glDepthMask(GL_LEQUAL);
+	//glUseProgram(shaderProgramID5);
+	//// ... set view and projection matrix
+
+	//mat4 view5 = identity_mat4();
+	//mat4 persp_proj5 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	//mat4 model5 = identity_mat4();
+
+	//int matrix_location5 = glGetUniformLocation(shaderProgramID5, "model");
+	//int view_mat_location5 = glGetUniformLocation(shaderProgramID5, "view");
+	//int proj_mat_location5 = glGetUniformLocation(shaderProgramID5, "proj");
+
+	//
+
+	//if (input == 'o') {
+	//	persp_proj5 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	//}
+	//else if (input == 'p') {
+	//	persp_proj5 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	//}
+
+
+	//view5 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+	//model5 = scale(model5, vec3(100.0f, 100.0f, 100.0f));
+
+	//glUniformMatrix4fv(proj_mat_location5, 1, GL_FALSE, (persp_proj5.m));
+	//glUniformMatrix4fv(view_mat_location5, 1, GL_FALSE, view5.m);
+	//glUniformMatrix4fv(matrix_location5, 1, GL_FALSE, model5.m);
+
+	//glDisable(GL_DEPTH_TEST);
+	//glBindVertexArray(skyboxVAO);
+	//glActiveTexture(GL_TEXTURE0);
+	//glBindTexture(GL_TEXTURE_CUBE_MAP, skyboxT);
+	//glDrawArrays(GL_TRIANGLES, 0, 36);
+	//glEnable(GL_DEPTH_TEST);
+	//glBindVertexArray(0);
+	//glDepthFunc(GL_LESS); // set depth function back to default
+
 	//glDisable(GL_TEXTURE_2D);
 	glutSwapBuffers();
 	glBindVertexArray(0);
@@ -805,7 +1116,8 @@ void init()
 	shaderProgramID2 = CompileShaders("simpleFragmentShader.txt", "simpleVertexShader.txt"); //ufo
 	shaderProgramID3 = CompileShaders("grassFragmentShader.txt","grassVertexShader.txt"); //grass
 	shaderProgramID4 = CompileShaders("beamFragmentShader.txt", "beamVertexShader.txt");
-
+	shaderProgramID5 = CompileShaders("skyFragmentShader.txt", "skyVertexShader.txt");
+	//shaderProgramID6 = CompileShaders("cubeFragmentShader.txt", "cubeVertexShader.txt");
 	generateObjectBufferMesh();
 
 }
@@ -921,6 +1233,66 @@ void motion(int xpos, int ypos)
 	}
 }
 
+//void create_cube_map(
+//	const char* front,
+//	const char* back,
+//	const char* top,
+//	const char* bottom,
+//	const char* left,
+//	const char* right,
+//	GLuint* tex_cube) {
+//	// generate a cube-map texture to hold all the sides
+//	glActiveTexture(GL_TEXTURE0);
+//	glGenTextures(1, tex_cube);
+//
+//	// load each image and copy into a side of the cube-map texture
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, front);
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, back);
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, top);
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, bottom);
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, left);
+//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_X, right);
+//	// format cube map texture
+//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+//}
+//
+//bool load_cube_map_side(
+//	GLuint texture, GLenum side_target, const char* file_name) {
+//	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+//
+//	int x, y, n;
+//	int force_channels = 4;
+//	unsigned char*  image_data = stbi_load(
+//		file_name, &x, &y, &n, force_channels);
+//	if (!image_data) {
+//		fprintf(stderr, "ERROR: could not load %s\n", file_name);
+//		return false;
+//	}
+//	// non-power-of-2 dimensions check
+//	if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0) {
+//		fprintf(stderr,
+//			"WARNING: image %s is not power-of-2 dimensions\n",
+//			file_name);
+//	}
+//
+//	// copy image data into 'target' side of cube map
+//	glTexImage2D(
+//		side_target,
+//		0,
+//		GL_RGBA,
+//		x,
+//		y,
+//		0,
+//		GL_RGBA,
+//		GL_UNSIGNED_BYTE,
+//		image_data);
+//	free(image_data);
+//	return true;
+//}
 
 
 int main(int argc, char** argv) {

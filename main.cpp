@@ -12,6 +12,7 @@
 #include <GL/glew.h>
 #include <GL/freeglut.h>
 
+
 // Assimp includes
 #include <assimp/cimport.h> // scene importer
 #include <assimp/scene.h> // collects data
@@ -25,10 +26,10 @@ MESH TO LOAD
 ----------------------------------------------------------------------------*/
 // this mesh is a dae file format but you should be able to use any other format too, obj is typically what is used
 // put the mesh in your project directory, or provide a filepath for it here
-#define MESH_NAME_1 "alienPoss1.dae"
-#define MESH_NAME_2 "ufoWOBeams1.dae"
+#define MESH_NAME_1 "alienPoss.dae"
+#define MESH_NAME_2 "ufoWOBeams.dae"
 #define MESH_NAME_3 "grassPoss.dae"
-#define MESH_NAME_4 "beams1.dae"
+#define MESH_NAME_4 "beams.dae"
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 /*----------------------------------------------------------------------------
@@ -155,11 +156,12 @@ ModelData mesh_data2;
 ModelData mesh_data3;
 ModelData mesh_data4;
 unsigned int mesh_vao = 0;
+int test = 0;
 int width = 800;
 int height = 600;
 mat4 model = identity_mat4();
 char input;
-float up, down, moveR = 0;
+float up, down, moveR, downUFO, upUFO = 0;
 float x, y, X, Y= 0.0;
 float tx, ty, tz = 0.0;
 float z = -10.0;
@@ -167,6 +169,9 @@ float v = 0.0;
 float b = 1.0;
 float c = 1.0f;
 float ypos;
+float yUFO;
+float yAlien;
+float finalYUFO;
 float rad = 0.017444444;
 vec3 cameraPos = vec3(0.0f, 0.0f, 3.0f);
 vec3 cameraUp = vec3(0.0f, 1.0f, 0.0f);
@@ -184,9 +189,12 @@ unsigned int g1texture;
 unsigned int utexture;
 unsigned int btexture;
 unsigned int skyboxT;
-GLuint cubeT;
+unsigned int cubeT;
 unsigned int cubeVAO, cubeVBO;
 unsigned int skyboxVAO, skyboxVBO;
+GLfloat density = 0.3; //set the density to 0.3 which is
+
+GLfloat fogColor[4] = { 0.5, 0.5, 0.5, 1.0 }; //set the for
 
 vector<std::string> faces =
 {
@@ -373,7 +381,71 @@ GLuint CompileShaders(const char* shaderFFile, const char* shaderVFile)
 }
 #pragma endregion SHADER_FUNCTIONS
 
+bool load_cube_map_side(
+	GLuint texture, GLenum side_target, const char* file_name) {
+	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
+
+	int x, y, n;
+	int force_channels = 4;
+	unsigned char*  image_data = stbi_load(
+		file_name, &x, &y, &n, force_channels);
+	if (!image_data) {
+		fprintf(stderr, "ERROR: could not load %s\n", file_name);
+		return false;
+	}
+	// non-power-of-2 dimensions check
+	if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0) {
+		fprintf(stderr,
+			"WARNING: image %s is not power-of-2 dimensions\n",
+			file_name);
+	}
+
+	// copy image data into 'target' side of cube map
+	glTexImage2D(
+		side_target,
+		0,
+		GL_RGBA,
+		x,
+		y,
+		0,
+		GL_RGBA,
+		GL_UNSIGNED_BYTE,
+		image_data);
+	free(image_data);
+	return true;
+
+}
+
+void create_cube_map(
+	const char* front,
+	const char* back,
+	const char* top,
+	const char* bottom,
+	const char* left,
+	const char* right,
+	GLuint* tex_cube) {
+	// generate a cube-map texture to hold all the sides
+	glActiveTexture(GL_TEXTURE2);
+	glGenTextures(1, tex_cube);
+
+	// load each image and copy into a side of the cube-map texture
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, front);
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, back);
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, top);
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, bottom);
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, left);
+	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_X, right);
+	// format cube map texture
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+
 // VBO Functions - click on + to expand
+
 #pragma region VBO_FUNCTIONS
 void generateObjectBufferMesh() {
 	/*----------------------------------------------------------------------------
@@ -487,6 +559,7 @@ void generateObjectBufferMesh() {
 	glVertexAttribPointer(loc3, 2, GL_FLOAT, GL_FALSE, 0, NULL);
 
 	//UFO beams
+
 	glGenTextures(1, &btexture);
 	glBindTexture(GL_TEXTURE_2D, btexture);
 
@@ -496,10 +569,10 @@ void generateObjectBufferMesh() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
 	int wB, hB, nrChannelsB;
-	unsigned char *beam = stbi_load("beams.jpg", &wB, &hB, &nrChannelsB, 0);
+	unsigned char *beam = stbi_load("beams.png", &wB, &hB, &nrChannelsB, 0);
 	if (beam)
 	{
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wB, hB, 0, GL_RGB, GL_UNSIGNED_BYTE, beam);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, wB, hB, 0, GL_RGBA, GL_UNSIGNED_BYTE, beam);
 		glGenerateMipmap(GL_TEXTURE_2D);
 	
 	}
@@ -554,13 +627,12 @@ void generateObjectBufferMesh() {
 
 
 	int wG, hG, nrChannelsG;
-	unsigned char *grass = stbi_load("grassText1.jpg", &wG, &hG, &nrChannelsG, 0);
+	unsigned char *grass = stbi_load("grass4.jpg", &wG, &hG, &nrChannelsG, 0);
 	if (grass)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wG, hG, 0, GL_RGB, GL_UNSIGNED_BYTE, grass);
 		glGenerateMipmap(GL_TEXTURE_2D);
-		//stbi_image_free(grass);
-		//glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG"), 0);
+
 	}
 	else
 	{
@@ -568,8 +640,6 @@ void generateObjectBufferMesh() {
 	}
 
 
-	//glActiveTexture(0);
-	//glBindTexture(GL_TEXTURE_2D, 0);
 	stbi_image_free(grass);
 
 
@@ -586,7 +656,7 @@ void generateObjectBufferMesh() {
 
 
 	int wG1, hG1, nrChannelsG1;
-	unsigned char *grass1 = stbi_load("grassTextSecond.jpg", &wG1, &hG1, &nrChannelsG1, 0);
+	unsigned char *grass1 = stbi_load("grass3.jpg", &wG1, &hG1, &nrChannelsG1, 0);
 	if (grass1)
 	{
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, wG1, hG1, 0, GL_RGB, GL_UNSIGNED_BYTE, grass1);
@@ -638,7 +708,7 @@ void generateObjectBufferMesh() {
 
 	//cube and skybox
 
-	//
+	
 	//glGenBuffers(1, &cubeVBO);
 	//glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 	//glBufferData(GL_ARRAY_BUFFER, 3 * 36 * sizeof(float), &cubeVertices, GL_STATIC_DRAW);
@@ -650,8 +720,24 @@ void generateObjectBufferMesh() {
 	//glBindBuffer(GL_ARRAY_BUFFER, cubeVBO);
 	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
 
-	//create_cube_map("front.jpg", "back.png", "up.jpg", "down.png", "left.jpg", "right.jpg", &cubeT);
+	//create_cube_map("ft.tga", "bk.tga", "up.tga", "dn.tga", "lf.tga", "rt.tga", &cubeT);
 	//	
+	//glActiveTexture(GL_TEXTURE2);
+	//glGenTextures(1, &cubeT);
+
+	//// load each image and copy into a side of the cube-map texture
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, "front.jpg");
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, "back.png");
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, "up.jpg");
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, "down.png");
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, "left.jpg");
+	//load_cube_map_side(cubeT, GL_TEXTURE_CUBE_MAP_POSITIVE_X, "right.jpg");
+	//// format cube map texture
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	//glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
 
 
@@ -749,9 +835,13 @@ void display() {
 
 	// tell GL to only draw onto a pixel if the shape is closer to the viewer
 	glEnable(GL_DEPTH_TEST); // enable depth-testing
+	//glClearColor(0.5, 0.5, 0.5, 1);//gray color, same as fog color
+	glClearDepth(1);
 	glDepthFunc(GL_LESS); // depth-testing interprets a smaller value as "closer"
-	glClearColor(0.5f, 0.8f, 0.9f, 1.0f);
+	glClearColor(0.52f, 0.75f, 0.91f, 1.0f);
+	//glClearColor(0.0, 0.0, 0.0, 1.0);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 
 	//UFO
 	glUseProgram(shaderProgramID2);
@@ -780,6 +870,12 @@ void display() {
 
 	view2 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
 
+	if (input == 'u') {
+		view2 = translate(view2, vec3(x, yUFO, z));
+	}
+	else {
+		view2 = translate(view2, vec3(x, y, z));
+	}
 
 	if (input == 'x') {
 		model2 = rotate_x_deg(model2, rotate_y);
@@ -792,8 +888,10 @@ void display() {
 	else if (input == 'z') {
 		model2 = rotate_z_deg(model2, rotate_y);
 	}
+	
 
-	view2 = translate(view2, vec3(x, y, z));
+
+	//view2 = translate(view2, vec3(x, y, z));
 	model2 = scale(model2, vec3(c, c, c));
 
 	// update uniforms & draw
@@ -802,59 +900,6 @@ void display() {
 	glUniformMatrix4fv(matrix_location2, 1, GL_FALSE, model2.m);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data2.mPointCount);
 
-	//UFO beams
-	glUseProgram(shaderProgramID4);
-
-	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureB"), 0);
-
-	glBindTexture(GL_TEXTURE_2D, btexture);
-
-
-	glBindVertexArray(VAO[2]);
-	
-
-
-	int matrix_location4 = glGetUniformLocation(shaderProgramID4, "model");
-	int view_mat_location4 = glGetUniformLocation(shaderProgramID4, "view");
-	int proj_mat_location4 = glGetUniformLocation(shaderProgramID4, "proj");
-
-	mat4 view4 = identity_mat4();
-	mat4 persp_proj4 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	mat4 model4 = identity_mat4();
-	model4 = model4 * model2;
-
-
-	if (input == 'o') {
-		persp_proj4 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
-	}
-	else if (input == 'p') {
-		persp_proj4 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
-	}
-
-	view4 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
-
-
-	if (input == 'x') {
-		model4 = rotate_x_deg(model4, rotate_y);
-
-	}
-	else if (input == 'y') {
-		model4 = rotate_y_deg(model4, rotate_y);
-
-	}
-	else if (input == 'z') {
-		model4 = rotate_z_deg(model4, rotate_y);
-	}
-
-	view4 = translate(view4, vec3(x, y, z));
-	model4 = scale(model4, vec3(c, c, c));
-
-	// update uniforms & draw
-	glUniformMatrix4fv(proj_mat_location4, 1, GL_FALSE, persp_proj4.m);
-	glUniformMatrix4fv(view_mat_location4, 1, GL_FALSE, view4.m);
-	glUniformMatrix4fv(matrix_location4, 1, GL_FALSE, model4.m);
-
-	glDrawArrays(GL_TRIANGLES, 0, mesh_data4.mPointCount);
 
 	//ALIEN
 	glUseProgram(shaderProgramID1);
@@ -872,7 +917,7 @@ void display() {
 	mat4 view1 = identity_mat4();
 	mat4 persp_proj1 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
 	mat4 model1 = identity_mat4();
-	model1 = model1 * model4;
+	model1 = model1 * model2;
 
 	if (input == 'o') {
 		persp_proj1 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
@@ -886,25 +931,12 @@ void display() {
 
 
 
-	// Root of the Hierarchy
-	if (input == 'x') {
-		model1 = rotate_x_deg(model1, rotate_y);
-
-	}
-	else if (input == 'y') {
-		model1 = rotate_y_deg(model1, rotate_y);
-
-	}
-	else if (input == 'z') {
-		model1 = rotate_z_deg(model1, rotate_y);
-	}
-
-
-	if (input == 'a') {
+	if (input == 'e') {
 		view1 = translate(view1, vec3(x, ypos, z));
 	}
-	else if (input == 'q') {
-		view1 = translate(view1, vec3(x, y, z));
+
+	else if (input == 'u') {
+		view1 = translate(view1, vec3(x, yUFO, z));
 	}
 	else {
 		view1 = translate(view1, vec3(x, y, z));
@@ -918,16 +950,15 @@ void display() {
 	glUniformMatrix4fv(matrix_location1, 1, GL_FALSE, model1.m);
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data1.mPointCount);
 
-
 	//GRASS
 
 	glUseProgram(shaderProgramID3);
 
 	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG"), 0);
 	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureG1"), 1);
-	
 
-	
+
+
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, gtexture);
 	glActiveTexture(GL_TEXTURE0);
@@ -966,6 +997,68 @@ void display() {
 
 	glDrawArrays(GL_TRIANGLES, 0, mesh_data3.mPointCount);
 
+	//UFO beams
+	glUseProgram(shaderProgramID4);
+
+	glUniform1i(glGetUniformLocation(shaderProgramID3, "ourTextureB"), 0);
+
+	//glTexEnvf(GL_TEXTURE_2D, GL_TEXTURE_ENV_MODE, GL_MODULATE);
+	glDepthMask(GL_FALSE);
+	glEnable(GL_BLEND);
+	glBlendFunc(GL_SRC_ALPHA, GL_CONSTANT_ALPHA);
+	glBlendEquation(GL_MAX);
+	glBlendColor(1.000, 0.012, 0.012, 1.000);
+	//glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+	glBindTexture(GL_TEXTURE_2D, btexture);
+
+
+	glBindVertexArray(VAO[2]);
+	
+
+
+	int matrix_location4 = glGetUniformLocation(shaderProgramID4, "model");
+	int view_mat_location4 = glGetUniformLocation(shaderProgramID4, "view");
+	int proj_mat_location4 = glGetUniformLocation(shaderProgramID4, "proj");
+
+	mat4 view4 = identity_mat4();
+	mat4 persp_proj4 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	mat4 model4 = identity_mat4();
+	model4 = model4 * model2 ;
+
+
+	if (input == 'o') {
+		persp_proj4 = orthographic((float)width, (float)height, 0.1f, 1000.0f);
+	}
+	else if (input == 'p') {
+		persp_proj4 = perspective(120.0f, (float)width / (float)height, 0.1f, 1000.0f);
+	}
+
+	view4 = look_at(cameraPos, cameraPos + cameraFront, cameraUp);
+
+
+	if (input == 'u') {
+		view4 = translate(view4, vec3(x, yUFO, z));
+	}
+	else {
+		view4 = translate(view4, vec3(x, y, z));
+	}
+	model4 = scale(model4, vec3(c, c, c));
+
+	// update uniforms & draw
+	glUniformMatrix4fv(proj_mat_location4, 1, GL_FALSE, persp_proj4.m);
+	glUniformMatrix4fv(view_mat_location4, 1, GL_FALSE, view4.m);
+	glUniformMatrix4fv(matrix_location4, 1, GL_FALSE, model4.m);
+
+	glDrawArrays(GL_TRIANGLES, 0, mesh_data4.mPointCount);
+
+	
+
+	glDisable(GL_BLEND);
+	glDepthMask(GL_TRUE);
+
+
+
+	
 	//cube
 
 	//int view_mat_location5 = glGetUniformLocation(shaderProgramID5, "view");
@@ -980,8 +1073,9 @@ void display() {
 
 	//glDepthMask(GL_FALSE);
 	//glUseProgram(shaderProgramID5);
-	//glActiveTexture(GL_TEXTURE0);
+	//glActiveTexture(GL_TEXTURE2);
 	//glBindTexture(GL_TEXTURE_CUBE_MAP, cubeT);
+	//glActiveTexture(GL_TEXTURE0);
 	//glBindVertexArray(cubeVAO);
 	//glDrawArrays(GL_TRIANGLES, 0, 36);
 	//glDepthMask(GL_TRUE);
@@ -1075,18 +1169,27 @@ void display() {
 
 void updateScene() {
 
-	if (down = 1) {
+	if (down == 1) {
 		if (ypos > y - 8) {
 			ypos -= 0.03;
 		}
 	}
-	else if (up = 1) {
-		if (ypos < y + 8) {
-			ypos += 0.001;
+	if (up == 1) {
+		if (ypos < y ) {
+			ypos += 0.03;
 		}
 	}
-	else if (moveR = 1) {
-		X += 0.001;
+	if (downUFO == 1) {
+		if (yUFO > y - 52) {
+			yUFO -= 0.07;
+
+		}
+	}
+	if (upUFO == 1) {
+		if (yUFO < y ) {
+			yUFO += 0.07;
+
+		}
 	}
 
 	static DWORD last_time = 0;
@@ -1110,7 +1213,17 @@ void init()
 	// Set up the shaders
 	//GLuint shaderProgramID = CompileShaders();
 	// load mesh into a vertex buffer array
+	//glEnable(GL_DEPTH_TEST); //enable the depth testing
+	//glEnable(GL_FOG); //enable the fog
+	//glFogi(GL_FOG_MODE, GL_EXP2); //set the fog mode to GL_EXP2
 
+	//glFogfv(GL_FOG_COLOR, fogColor); //set the fog color to
+
+	//glFogf(GL_FOG_DENSITY, density); //set the density to the
+
+	//glHint(GL_FOG_HINT, GL_NICEST); // set the fog to look the
+	
+	
 	
 	shaderProgramID1 = CompileShaders("alienFragmentShader.txt","alienVertexShader.txt");
 	shaderProgramID2 = CompileShaders("simpleFragmentShader.txt", "simpleVertexShader.txt"); //ufo
@@ -1124,6 +1237,7 @@ void init()
 
 // Placeholder code for the keypress
 void keypress(unsigned char key, int xx, int yy) {
+
 	if (key == 'x') {
 		input = 'x';
 	}
@@ -1169,21 +1283,36 @@ void keypress(unsigned char key, int xx, int yy) {
 	else if (key == 'h') {
 		cameraPos += cross(normalise(cross(cameraFront, cameraUp)), cameraSpeed);
 	}
+
 	else if (key == 'e') {
-		input = 'a';
+		input = 'e';
 		up = 0;
 		down = 1;
-		ypos = y;
+		downUFO = 0;
+		ypos = yUFO;
+		y = yUFO;
 	}
 	else if (key == 'q') {
-		input = 'q';
-		down = 0;
+		input = 'e';
 		up = 1;
-		ypos = y;
+		down = 0;
+		downUFO = 0;
+		y = yUFO;
 	}
-	else if (key == GLUT_KEY_RIGHT) {
-		 moveR = 1;
+	else if (key == 'u') {
+		 input = 'u';
+		 downUFO = 1;
+		 upUFO = 0;
+		 yUFO = 0;
+		 y = 0;
 	}
+	else if (key == 'i') {
+		input = 'u';
+		downUFO = 0;
+		upUFO = 1;
+		y = 0;
+	}
+
 }
 
 void mouse(int button, int state, int x, int y)
@@ -1233,66 +1362,6 @@ void motion(int xpos, int ypos)
 	}
 }
 
-//void create_cube_map(
-//	const char* front,
-//	const char* back,
-//	const char* top,
-//	const char* bottom,
-//	const char* left,
-//	const char* right,
-//	GLuint* tex_cube) {
-//	// generate a cube-map texture to hold all the sides
-//	glActiveTexture(GL_TEXTURE0);
-//	glGenTextures(1, tex_cube);
-//
-//	// load each image and copy into a side of the cube-map texture
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Z, front);
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Z, back);
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_Y, top);
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_Y, bottom);
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_NEGATIVE_X, left);
-//	load_cube_map_side(*tex_cube, GL_TEXTURE_CUBE_MAP_POSITIVE_X, right);
-//	// format cube map texture
-//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-//	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-//}
-//
-//bool load_cube_map_side(
-//	GLuint texture, GLenum side_target, const char* file_name) {
-//	glBindTexture(GL_TEXTURE_CUBE_MAP, texture);
-//
-//	int x, y, n;
-//	int force_channels = 4;
-//	unsigned char*  image_data = stbi_load(
-//		file_name, &x, &y, &n, force_channels);
-//	if (!image_data) {
-//		fprintf(stderr, "ERROR: could not load %s\n", file_name);
-//		return false;
-//	}
-//	// non-power-of-2 dimensions check
-//	if ((x & (x - 1)) != 0 || (y & (y - 1)) != 0) {
-//		fprintf(stderr,
-//			"WARNING: image %s is not power-of-2 dimensions\n",
-//			file_name);
-//	}
-//
-//	// copy image data into 'target' side of cube map
-//	glTexImage2D(
-//		side_target,
-//		0,
-//		GL_RGBA,
-//		x,
-//		y,
-//		0,
-//		GL_RGBA,
-//		GL_UNSIGNED_BYTE,
-//		image_data);
-//	free(image_data);
-//	return true;
-//}
 
 
 int main(int argc, char** argv) {
@@ -1321,7 +1390,10 @@ int main(int argc, char** argv) {
 	}
 	// Set up your objects and shaders
 	init();
+
 	// Begin infinite event loop
+	sndPlaySound("Interstellar.wav", SND_ASYNC);
+	//PlaySound(TEXT("Interstellar.wav"), NULL, SND_SYNC);
 	glutMainLoop();
 	return 0;
 }
